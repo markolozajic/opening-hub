@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { PgnAttachment } from '../types';
-  import { FileText, Trash2, Plus, ChevronDown, ChevronUp } from '@lucide/svelte';
+  import { Chess } from 'chess.js';
+  import { openPgnView } from '../state/pgnView.svelte';
+  import { FileText, Trash2, Plus, ChevronDown, ChevronUp, Eye } from '@lucide/svelte';
 
   let {
     attachments = [] as PgnAttachment[],
@@ -14,16 +16,69 @@
   let pgnText = $state('');
   let expanded = $state<Record<string, boolean>>({});
 
+  function fmt(v: string): string {
+    return v && v !== '?' && v !== '*' && v !== '????.??.??' && v !== '-' ? v : '';
+  }
+
+  function extractYear(text: string): string | null {
+    const m = text.match(/(\d{4})/);
+    return m ? m[1] : null;
+  }
+
+  function buildLabel(white: string, black: string, result: string, event: string, date: string): string {
+    const parts: string[] = [];
+
+    if (fmt(white) && fmt(black)) {
+      let players = `${white} vs ${black}`;
+      if (fmt(result)) players += `, ${result}`;
+      parts.push(players);
+    }
+
+    const eventYear = event ? extractYear(event) : null;
+    const dateYear = date && date !== '?' && date !== '????.??.??' ? date.substring(0, 4) : '';
+    const year = eventYear || fmt(dateYear) || '';
+    const cleanEvent = eventYear ? event.replace(/\s*\d{4}\s*$/, '').trim() : (fmt(event) || '');
+
+    const eventParts: string[] = [];
+    if (cleanEvent) eventParts.push(cleanEvent);
+    if (year) eventParts.push(year);
+    if (eventParts.length > 0) parts.push(eventParts.join(', '));
+
+    return parts.length > 0 ? parts.join(' · ') : 'Game';
+  }
+
+  function getLabelFromPgn(pgn: string): string {
+    try {
+      const chess = new Chess();
+      chess.loadPgn(pgn);
+      const headers = chess.getHeaders();
+      return buildLabel(
+        headers['White'] || '',
+        headers['Black'] || '',
+        headers['Result'] || '',
+        headers['Event'] || '',
+        headers['Date'] || '',
+      );
+    } catch {
+      return 'Game';
+    }
+  }
+
   function handleAdd() {
     if (!pgnText.trim()) return;
-    onAdd({ id: crypto.randomUUID(), pgn: pgnText.trim(), label: label.trim() || 'Game' });
+    const defaultLabel = getLabelFromPgn(pgnText.trim());
+    onAdd({ id: crypto.randomUUID(), pgn: pgnText.trim(), label: label.trim() || defaultLabel });
     label = '';
     pgnText = '';
     showForm = false;
   }
 
-  function toggleExpand(id: string) {
-    expanded[id] = !expanded[id];
+  function toggleExpand(id: string, pgn: string) {
+    if (readonly) {
+      openPgnView(pgn);
+    } else {
+      expanded[id] = !expanded[id];
+    }
   }
 </script>
 
@@ -33,8 +88,10 @@
       {#each attachments as att}
         <div class="att-item">
           <div class="att-header">
-            <button class="expand-btn" onclick={() => toggleExpand(att.id)}>
-              {#if expanded[att.id]}
+            <button class="expand-btn" onclick={() => toggleExpand(att.id, att.pgn)}>
+              {#if readonly}
+                <Eye size={12} />
+              {:else if expanded[att.id]}
                 <ChevronUp size={12} />
               {:else}
                 <ChevronDown size={12} />
@@ -48,7 +105,7 @@
               </button>
             {/if}
           </div>
-          {#if expanded[att.id]}
+          {#if !readonly && expanded[att.id]}
             <pre class="pgn-content">{att.pgn}</pre>
           {/if}
         </div>
@@ -61,7 +118,7 @@
   {#if !readonly}
     {#if showForm}
       <div class="add-form">
-        <input bind:value={label} placeholder="Label" class="input" />
+        <input bind:value={label} placeholder="Label (optional)" class="input" />
         <textarea
           bind:value={pgnText}
           placeholder="Paste PGN here..."

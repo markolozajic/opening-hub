@@ -4,10 +4,12 @@
   import { getSideLabel } from '../utils/fen';
   import { getComfort } from '../state/comfort.svelte';
   import { getNovelty } from '../state/novelty.svelte';
+  import { pgnView } from '../state/pgnView.svelte';
   import ComfortBadge from './ComfortBadge.svelte';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import LinkList from './LinkList.svelte';
   import PgnAttachmentList from './PgnAttachmentList.svelte';
+  import PgnViewer from './PgnViewer.svelte';
   import { Pencil } from '@lucide/svelte';
 
   let {
@@ -21,7 +23,9 @@
   let isNovel = $derived(fen ? getNovelty(nav.activeRepertoire, fen) : false);
 </script>
 
-{#if position}
+{#if pgnView.active}
+  <PgnViewer />
+{:else if position}
   <div class="position-display">
     <div class="header">
       <div class="title-row">

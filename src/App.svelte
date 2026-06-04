@@ -21,7 +21,8 @@
   import ImportPanel from './lib/components/ImportPanel.svelte';
   import ExportPanel from './lib/components/ExportPanel.svelte';
   import CleanupPanel from './lib/components/CleanupPanel.svelte';
-  import { Search, Upload, Download, BookOpen, Trash2, AlertTriangle } from '@lucide/svelte';
+  import { pgnView, pgnCurrentFen, closePgnView } from './lib/state/pgnView.svelte';
+  import { Search, Upload, Download, BookOpen, Trash2, AlertTriangle, ArrowLeft } from '@lucide/svelte';
 
   let initialized = $state(false);
   let selectedSquare = $state<string | null>(null);
@@ -38,7 +39,11 @@
   let movePath = $derived(nav.currentPath);
   let editBoardFen = $state<string | null>(null);
   let lastInsertToFen = $state<string | null>(null);
-  let displayFen = $derived(editBoardFen ?? nav.currentFen);
+  let displayFen = $derived(
+    pgnView.active
+      ? (pgnCurrentFen() ?? nav.currentFen)
+      : (editBoardFen ?? nav.currentFen)
+  );
 
   onMount(async () => {
     await initPositionStore();
@@ -77,6 +82,7 @@
   });
 
   function handleSquareClick(sq: string) {
+    if (pgnView.active) return;
     const turn = getTurn(displayFen);
     const moves = getLegalMoves(displayFen);
 
@@ -114,6 +120,7 @@
   }
 
   function handleSquareDrag(sq: string) {
+    if (pgnView.active) return;
     const turn = getTurn(displayFen);
     const piece = getPieceAt(displayFen, sq);
     if (piece && piece.color === turn) {
@@ -124,6 +131,7 @@
   }
 
   function handleDrop(from: string, to: string) {
+    if (pgnView.active) return;
     const moves = getLegalMoves(displayFen);
     const move = moves.find(m => m.from === from && m.to === to);
     if (move) {
@@ -264,7 +272,18 @@
       </nav>
     </header>
 
-    <NavBar />
+    <div class:locked={pgnView.active}>
+      <NavBar />
+    </div>
+
+    {#if pgnView.active}
+      <div class="pgn-banner">
+        <span class="pgn-banner-label">Viewing: {pgnView.label}</span>
+        <button class="pgn-banner-btn" onclick={closePgnView}>
+          <ArrowLeft size={14} /> Back to repertoire
+        </button>
+      </div>
+    {/if}
 
     <main class="main-area">
       <section class="board-column" style="width: {boardWidth}px">
@@ -272,7 +291,7 @@
           fen={displayFen}
           selectedSquare={selectedSquare}
           highlightedSquares={highlightedSquares}
-          interactive={true}
+          interactive={!pgnView.active && currentPanel === 'main'}
           flipped={isFlipped}
           size={boardWidth - 32}
           onSquareClick={handleSquareClick}
@@ -286,7 +305,7 @@
           <code>{displayFen}</code>
         </div>
         {#if movePath.length > 0}
-          <div class="move-history">
+          <div class="move-history" class:locked={pgnView.active}>
             {#each movePath as step, i}
               <button class="history-step" onclick={() => navigateTo(step.toFen)}>
                 {i % 2 === 0 ? `${Math.floor(i / 2) + 1}. ${step.san}` : step.san}{step.marker}
@@ -318,7 +337,7 @@
 
       {#if currentPanel === 'main'}
         <Resizer onResize={(d: number) => movesWidth = Math.max(140, movesWidth - d)} />
-        <section class="moves-column" style="width: {movesWidth}px">
+        <section class="moves-column" class:locked={pgnView.active} style="width: {movesWidth}px">
           <MoveList onDeleteMove={handleDeleteMove} onReorderMove={handleReorderMove} onConfirmMove={handleConfirmMove} />
         </section>
       {/if}
@@ -434,5 +453,45 @@
 
   .moves-column {
     overflow-y: auto; flex-shrink: 0;
+  }
+
+  .locked {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .pgn-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.375rem 0.75rem;
+    background: var(--accent-bg);
+    border-bottom: 1px solid var(--accent);
+    flex-shrink: 0;
+  }
+
+  .pgn-banner-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .pgn-banner-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-family: inherit;
+  }
+
+  .pgn-banner-btn:hover {
+    background: var(--accent);
+    color: #fff;
   }
 </style>
