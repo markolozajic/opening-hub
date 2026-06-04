@@ -1,13 +1,14 @@
 <script lang="ts">
   import { nav } from '../state/navigation.svelte';
-  import { getPosition, findMoveNumber } from '../db/positionStore.svelte';
+  import { labelData } from '../state/labels.svelte';
+  import { getPosition, findMoveNumber, findAllTranspositionPaths } from '../db/positionStore.svelte';
   import { getComfort } from '../state/comfort.svelte';
   import { getTurn } from '../utils/fen';
   import { sortMoves, formatNumberedSan } from '../utils/positionUtils';
   import MiniBoard from './MiniBoard.svelte';
   import ComfortBadge from './ComfortBadge.svelte';
   import { navigateTo } from '../state/navigation.svelte';
-  import { Trash2, GripVertical } from '@lucide/svelte';
+  import { Trash2, GripVertical, Eye, X } from '@lucide/svelte';
 
   let {
     onDeleteMove = undefined as ((san: string) => void) | undefined,
@@ -25,7 +26,7 @@
           toFen: edge.toFen,
           comment: edge.comment,
           autoDetected: edge.autoDetected,
-          label: edge.label,
+          label: labelData.moveLabels[nav.currentFen]?.[san],
           childPos: getPosition(nav.activeRepertoire, edge.toFen),
           comfort: getComfort(nav.activeRepertoire, edge.toFen),
         }))
@@ -42,6 +43,16 @@
 
   let dragIndex = $state<number | null>(null);
   let dragOverIndex = $state<number | null>(null);
+  let showTranspositionsFor = $state<string | null>(null);
+  let transpositionPaths = $state<{ san: string; toFen: string }[][]>([]);
+  let transpositionTargetName = $state('');
+  let transpositionDialogRef = $state<HTMLDialogElement | null>(null);
+
+  $effect(() => {
+    if (transpositionDialogRef && showTranspositionsFor !== null) {
+      transpositionDialogRef.showModal();
+    }
+  });
 
   function handleNavigate(fen: string, san: string, autoDetected?: boolean) {
     if (autoDetected && onConfirmMove) {
@@ -90,6 +101,25 @@
     dragIndex = null;
     dragOverIndex = null;
   }
+
+  function handleShowTranspositions(san: string, toFen: string) {
+    const paths = findAllTranspositionPaths(nav.activeRepertoire, toFen);
+    const target = getPosition(nav.activeRepertoire, toFen);
+    transpositionTargetName = target?.name ?? toFen;
+    transpositionPaths = paths.map(path =>
+      path.map(step => ({
+        san: step.san,
+        toFen: step.toFen,
+      }))
+    );
+    showTranspositionsFor = san;
+  }
+
+  function closeTranspositions() {
+    showTranspositionsFor = null;
+    transpositionPaths = [];
+    transpositionDialogRef?.close();
+  }
 </script>
 
 <div class="move-list">
@@ -132,19 +162,66 @@
             {/if}
           </button>
           {#if onDeleteMove}
-            <button
-              class="delete-btn"
-              onclick={() => onDeleteMove(move.san)}
-              title="Delete move"
-            >
-              <Trash2 size={12} />
-            </button>
+            <div class="action-btns">
+              <button
+                class="action-btn"
+                onclick={() => onDeleteMove(move.san)}
+                title="Delete move"
+              >
+                <Trash2 size={12} />
+              </button>
+              <button
+                class="action-btn"
+                onclick={() => handleShowTranspositions(move.san, move.toFen)}
+                title="Show transposition paths"
+              >
+                <Eye size={12} />
+              </button>
+            </div>
           {/if}
         </div>
       {/each}
     </div>
   {/if}
 </div>
+
+<dialog
+  class="transposition-dialog"
+  bind:this={transpositionDialogRef}
+  onclick={(e) => { if (e.target === transpositionDialogRef) closeTranspositions(); }}
+  onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); closeTranspositions(); } }}
+  onclose={closeTranspositions}
+>
+  {#if showTranspositionsFor !== null}
+    <div class="dialog-header">
+      <h3 class="dialog-title">Transposition paths to {transpositionTargetName}</h3>
+      <button class="btn-icon" onclick={closeTranspositions} title="Close">
+        <X size={14} />
+      </button>
+    </div>
+    <div class="dialog-body">
+      {#if transpositionPaths.length === 0}
+        <p class="empty-paths">No other paths found.</p>
+      {:else}
+        {#each transpositionPaths as path, i}
+          {#if i > 0}
+            <hr class="path-separator">
+          {/if}
+          <div class="path-section">
+            <span class="path-label">── Path {i + 1} ──</span>
+            <div class="path-moves">
+              {#each path as step, j}
+                <button class="path-step" onclick={() => navigateTo(step.toFen)}>
+                  {j % 2 === 0 ? `${Math.floor(j / 2) + 1}. ` : ''}{step.san}
+                </button>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      {/if}
+    </div>
+  {/if}
+</dialog>
 
 <style>
   .move-list {
@@ -201,17 +278,69 @@
   .move-card:hover {
     border-color: var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,0.1);
   }
-  .delete-btn {
+  .action-btns {
+    display: flex; flex-direction: column; gap: 0.25rem;
+    flex-shrink: 0;
+  }
+  .action-btn {
     display: flex; align-items: center; justify-content: center;
     padding: 0.25rem; border: 1px solid var(--border); border-radius: 4px;
     background: var(--surface1); color: var(--muted); cursor: pointer;
-    flex-shrink: 0; margin-top: 0.25rem;
   }
-  .delete-btn:hover { color: var(--danger, #ef4444); border-color: var(--danger, #ef4444); }
+  .action-btn:hover { color: var(--danger, #ef4444); border-color: var(--danger, #ef4444); }
+  .action-btn:last-child:hover { color: var(--accent); border-color: var(--accent); }
   .move-header { display: flex; align-items: center; gap: 0.375rem; }
   .move-san {
     font-weight: 600; font-size: 0.9375rem; color: var(--text-h);
   }
   .move-comment { font-size: 0.6875rem; color: var(--text); line-height: 1.3; }
   .child-name { font-size: 0.6875rem; color: var(--accent); font-style: italic; }
+
+  .transposition-dialog {
+    border: 1px solid var(--border); border-radius: 8px; padding: 0;
+    background: var(--bg); color: var(--text); min-width: 320px; max-width: 480px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  }
+  .transposition-dialog::backdrop {
+    background: rgba(0,0,0,0.3);
+  }
+  .dialog-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--border);
+  }
+  .dialog-title {
+    margin: 0; font-size: 0.9375rem; font-weight: 600; color: var(--text-h);
+  }
+  .dialog-body {
+    padding: 0.75rem; max-height: 60vh; overflow-y: auto;
+  }
+  .empty-paths {
+    color: var(--muted); font-style: italic; font-size: 0.875rem; text-align: center; margin: 1rem 0;
+  }
+  .path-section {
+    display: flex; flex-direction: column; gap: 0.375rem;
+  }
+  .path-label {
+    font-size: 0.75rem; font-weight: 600; color: var(--muted);
+    letter-spacing: 0.03em;
+  }
+  .path-moves {
+    display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem;
+    font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.8125rem; color: var(--text-h); line-height: 1.5;
+  }
+  .path-step {
+    background: none; border: none; padding: 0;
+    font-family: inherit; font-size: inherit; color: var(--accent);
+    cursor: pointer; white-space: nowrap;
+  }
+  .path-step:hover { text-decoration: underline; }
+  .path-separator {
+    border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;
+  }
+  .btn-icon {
+    background: none; border: none; cursor: pointer; padding: 0.25rem;
+    color: var(--muted); border-radius: 4px; display: flex;
+  }
+  .btn-icon:hover { color: var(--text-h); background: var(--surface2); }
 </style>

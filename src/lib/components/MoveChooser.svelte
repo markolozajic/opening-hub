@@ -1,8 +1,10 @@
 <script lang="ts">
   import { nav, chooseMove, cancelMoveChooser } from '../state/navigation.svelte';
+  import { labelData } from '../state/labels.svelte';
   import { getPosition } from '../db/positionStore.svelte';
   import { getComfort } from '../state/comfort.svelte';
   import { sortMoves } from '../utils/positionUtils';
+  import { MOVE_LABELS } from '../constants';
   import ComfortBadge from './ComfortBadge.svelte';
   import { X } from '@lucide/svelte';
 
@@ -32,6 +34,7 @@
       toFen: edge.toFen,
       comfort: getComfort(nav.activeRepertoire, edge.toFen),
       childName: getPosition(nav.activeRepertoire, edge.toFen)?.name,
+      label: labelData.moveLabels[nav.currentFen]?.[san],
     }));
     return sortMoves(pos.moveOrder, raw);
   }
@@ -86,12 +89,16 @@
       <button
         class="chooser-item"
         class:selected={i === selectedIndex}
+        class:label-main={child.label === 'main'}
+        class:label-alternative={child.label === 'alternative'}
+        class:label-avoid={child.label === 'avoid'}
         role="option"
         aria-selected={i === selectedIndex}
         onclick={() => chooseMove(child.toFen)}
         onmouseenter={() => selectedIndex = i}
       >
         <span class="child-san">{child.san}</span>
+        <span class="child-label-dot" class:dot-main={child.label === 'main'} class:dot-alt={child.label === 'alternative'} class:dot-avoid={child.label === 'avoid'}></span>
         <ComfortBadge level={child.comfort} size={10} />
         {#if child.childName}
           <span class="child-name">{child.childName}</span>
@@ -117,7 +124,7 @@
   .chooser-title { margin: 0; font-size: 0.9375rem; font-weight: 600; color: var(--text-h); }
   .chooser-list { display: flex; flex-direction: column; padding: 0.375rem; gap: 0.25rem; outline: none; }
   .chooser-item {
-    display: flex; align-items: center; gap: 0.5rem;
+    display: flex; align-items: center; gap: 0.4rem;
     padding: 0.5rem 0.75rem; border: 1px solid transparent; border-radius: 6px;
     background: none; cursor: pointer; text-align: left; width: 100%;
     box-sizing: border-box; font-family: inherit; font-size: 0.9375rem;
@@ -125,8 +132,17 @@
   }
   .chooser-item:hover { background: var(--surface2); border-color: var(--accent); }
   .chooser-item.selected { background: var(--accent-bg); border-color: var(--accent); }
+  .chooser-item.label-main { border-left: 3px solid #d97706; }
+  .chooser-item.label-alternative { border-left: 3px solid #2563eb; }
+  .chooser-item.label-avoid { border-left: 3px solid #dc2626; }
   .child-san { font-weight: 600; color: var(--text-h); min-width: 2.5rem; }
   .child-name { font-size: 0.75rem; color: var(--accent); font-style: italic; }
+  .child-label-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .child-label-dot.dot-main { background: #d97706; }
+  .child-label-dot.dot-alt { background: #2563eb; }
+  .child-label-dot.dot-avoid { background: #dc2626; }
   .btn-icon {
     background: none; border: none; cursor: pointer; padding: 0.25rem;
     color: var(--muted); border-radius: 4px; display: flex;

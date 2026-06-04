@@ -119,12 +119,6 @@
 
   async function handleSave() {
     if (!position) return;
-    const hasOurMoves = ourMoves.length > 0;
-    const hasMain = Object.values(moveLabels).some(l => l === 'main') || ourMoves.some(m => (moveLabels[m.san] ?? m.label) === 'main');
-    if (hasOurMoves && !hasMain) {
-      labelError = 'At least one move must be labeled "Main".';
-      return;
-    }
     labelError = '';
 
     saving = true;

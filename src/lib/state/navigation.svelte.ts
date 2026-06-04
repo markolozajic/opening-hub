@@ -4,7 +4,8 @@ import { getRootFen, getPosition } from '../db/positionStore.svelte';
 export const nav = $state({
   activeRepertoire: 'white' as Repertoire,
   currentFen: getRootFen(),
-  history: [] as string[],
+  backStack: [] as string[],
+  forwardStack: [] as string[],
   showMoveChooser: false,
 });
 
@@ -12,29 +13,38 @@ export function switchRepertoire(r: Repertoire): void {
   if (r === nav.activeRepertoire) return;
   nav.activeRepertoire = r;
   nav.currentFen = getRootFen();
-  nav.history = [];
+  nav.backStack = [];
+  nav.forwardStack = [];
   nav.showMoveChooser = false;
 }
 
 export function navigateTo(fen: string): void {
-  nav.history.push(nav.currentFen);
+  if (fen === nav.currentFen) return;
+  nav.backStack.push(nav.currentFen);
+  nav.forwardStack = [];
   nav.currentFen = fen;
 }
 
 export function goBack(): string | undefined {
-  if (nav.history.length === 0) return undefined;
-  nav.currentFen = nav.history.pop()!;
+  if (nav.backStack.length === 0) return undefined;
+  nav.forwardStack.push(nav.currentFen);
+  nav.currentFen = nav.backStack.pop()!;
   return nav.currentFen;
 }
 
 export function canGoBack(): boolean {
-  return nav.history.length > 0;
+  return nav.backStack.length > 0;
+}
+
+export function canGoForward(): boolean {
+  return nav.forwardStack.length > 0;
 }
 
 export function navigateToRoot(): void {
   const rootFen = getRootFen();
   if (nav.currentFen !== rootFen) {
-    nav.history.push(nav.currentFen);
+    nav.backStack.push(nav.currentFen);
+    nav.forwardStack = [];
     nav.currentFen = rootFen;
   }
 }
@@ -46,10 +56,17 @@ export function getChildMoves(): { san: string; toFen: string }[] {
 }
 
 export function goForward(): void {
+  if (nav.forwardStack.length > 0) {
+    nav.backStack.push(nav.currentFen);
+    nav.currentFen = nav.forwardStack.pop()!;
+    return;
+  }
   const children = getChildMoves();
   if (children.length === 0) return;
   if (children.length === 1) {
-    navigateTo(children[0].toFen);
+    nav.backStack.push(nav.currentFen);
+    nav.forwardStack = [];
+    nav.currentFen = children[0].toFen;
   } else {
     nav.showMoveChooser = true;
   }

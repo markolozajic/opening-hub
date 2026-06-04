@@ -217,6 +217,35 @@ export function buildMovePath(repertoire: Repertoire, targetFen: string): MovePa
   return path;
 }
 
+export function findAllTranspositionPaths(repertoire: Repertoire, targetFen: string): MovePathStep[][] {
+  const rootFen = getRootFen();
+  if (targetFen === rootFen) return [];
+
+  const paths: MovePathStep[][] = [];
+  const visited = new Set<string>();
+
+  function dfs(fen: string, path: MovePathStep[]) {
+    if (fen === targetFen) {
+      paths.push([...path]);
+      return;
+    }
+    const pos = getPosition(repertoire, fen);
+    if (!pos) return;
+    for (const [san, edge] of Object.entries(pos.moves)) {
+      if (visited.has(edge.toFen)) continue;
+      visited.add(edge.toFen);
+      path.push({ fen, toFen: edge.toFen, san });
+      dfs(edge.toFen, path);
+      path.pop();
+      visited.delete(edge.toFen);
+    }
+  }
+
+  visited.add(rootFen);
+  dfs(rootFen, []);
+  return paths;
+}
+
 export function getOrCreatePosition(repertoire: Repertoire, fen: string): Position {
   const key = cacheKey(repertoire, fen);
   if (positionCache[key]) return positionCache[key];
@@ -330,9 +359,6 @@ export async function addMove(repertoire: Repertoire, fromFen: string, san: stri
     from.moveOrder.push(san);
   }
   from.moves[san] = { toFen, comment };
-  if (getTurn(fromFen) === (repertoire === 'white' ? 'w' : 'b')) {
-    from.moves[san].label = 'main';
-  }
   from.updatedAt = Date.now();
   await db.positions.put(toPlain(from));
 }

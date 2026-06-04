@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { nav, canGoBack, navigateToRoot, goBack, goForward, switchRepertoire } from '../state/navigation.svelte';
+  import { nav, canGoBack, canGoForward, navigateToRoot, goBack, goForward, switchRepertoire } from '../state/navigation.svelte';
   import { getPosition } from '../db/positionStore.svelte';
   import { ArrowLeft, ArrowRight, Home } from '@lucide/svelte';
 
@@ -24,7 +24,7 @@
     <button class="nav-btn" onclick={navigateToRoot} title="Home">
       <Home size={16} />
     </button>
-    <button class="nav-btn" onclick={goForward} disabled={moveCount === 0} title="Forward (→)">
+    <button class="nav-btn" onclick={goForward} disabled={!canGoForward() && moveCount === 0} title="Forward (→)">
       {#if moveCount > 1}
         <span class="count-badge">{moveCount}</span>
       {/if}

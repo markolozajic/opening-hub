@@ -4,6 +4,7 @@
   import { initPositionStore, getPosition, addMove, removeMove, setMoveOrder, getRepertoirePositions, detectTranspositions, confirmMove, dismissMove, buildMovePath, findMoveNumber } from './lib/db/positionStore.svelte';
   import { nav, handleKeyDown, navigateTo } from './lib/state/navigation.svelte';
   import { invalidateComfortCache } from './lib/state/comfort.svelte';
+  import { labelData, recomputeLabels } from './lib/state/labels.svelte';
   import { getLegalMoves, findMoveBySquares, getPieceAt } from './lib/chess/boardUtils';
   import { getTurn, normalizeFen, toChessJsFen } from './lib/utils/fen';
   import { formatNumberedSan } from './lib/utils/positionUtils';
@@ -15,15 +16,16 @@
   import MoveChooser from './lib/components/MoveChooser.svelte';
   import Resizer from './lib/components/Resizer.svelte';
   import SearchView from './lib/components/SearchView.svelte';
+  import IssuesPanel from './lib/components/IssuesPanel.svelte';
   import ImportPanel from './lib/components/ImportPanel.svelte';
   import ExportPanel from './lib/components/ExportPanel.svelte';
   import CleanupPanel from './lib/components/CleanupPanel.svelte';
-  import { Search, Upload, Download, BookOpen, Trash2 } from '@lucide/svelte';
+  import { Search, Upload, Download, BookOpen, Trash2, AlertTriangle } from '@lucide/svelte';
 
   let initialized = $state(false);
   let selectedSquare = $state<string | null>(null);
   let highlightedSquares = $state<string[]>([]);
-  let currentPanel = $state<'main' | 'edit' | 'search' | 'import' | 'export' | 'cleanup'>('main');
+  let currentPanel = $state<'main' | 'edit' | 'search' | 'import' | 'export' | 'cleanup' | 'issues'>('main');
   let pendingMoveInsert = $state<{ san: string; fen: string } | null>(null);
 
   let boardWidth = $state(720);
@@ -53,6 +55,14 @@
     const fen = nav.currentFen;
     const rep = nav.activeRepertoire;
     detectTranspositions(rep, fen);
+  });
+
+  $effect(() => {
+    if (!initialized) return;
+    const rep = nav.activeRepertoire;
+    const positions = getRepertoirePositions(rep);
+    for (const p of positions) void p.updatedAt;
+    recomputeLabels(rep);
   });
 
   $effect(() => {
@@ -233,6 +243,16 @@
         >
           <Trash2 size={14} /> Cleanup
         </button>
+        <button
+          class="topbar-btn issues-btn"
+          class:active={currentPanel === 'issues'}
+          onclick={() => currentPanel = currentPanel === 'issues' ? 'main' : 'issues'}
+        >
+          <AlertTriangle size={14} /> Issues
+          {#if labelData.issueCount > 0}
+            <span class="issue-badge">{labelData.issueCount}</span>
+          {/if}
+        </button>
       </nav>
     </header>
 
@@ -280,6 +300,8 @@
           <ExportPanel onClose={() => currentPanel = 'main'} />
         {:else if currentPanel === 'cleanup'}
           <CleanupPanel onClose={() => currentPanel = 'main'} />
+        {:else if currentPanel === 'issues'}
+          <IssuesPanel onClose={() => currentPanel = 'main'} />
         {:else}
           <PositionDisplay position={currentPosition} onEdit={() => currentPanel = 'edit'} />
         {/if}
@@ -346,6 +368,15 @@
 
   .topbar-btn.active {
     background: var(--accent-bg); color: var(--accent); border-color: var(--accent);
+  }
+
+  .issues-btn { position: relative; }
+  .issue-badge {
+    position: absolute; top: -4px; right: -4px;
+    min-width: 16px; height: 16px; border-radius: 8px;
+    background: #ef4444; color: #fff; font-size: 0.625rem;
+    display: flex; align-items: center; justify-content: center;
+    line-height: 1; padding: 0 3px;
   }
 
   .main-area {
