@@ -97,6 +97,11 @@
       selectedSquare = null;
       highlightedSquares = [];
     } else {
+      if (sq === selectedSquare) {
+        selectedSquare = null;
+        highlightedSquares = [];
+        return;
+      }
       const piece = getPieceAt(displayFen, sq);
       if (piece && piece.color === turn) {
         selectedSquare = sq;
@@ -105,6 +110,16 @@
         selectedSquare = null;
         highlightedSquares = [];
       }
+    }
+  }
+
+  function handleSquareDrag(sq: string) {
+    const turn = getTurn(displayFen);
+    const piece = getPieceAt(displayFen, sq);
+    if (piece && piece.color === turn) {
+      selectedSquare = sq;
+      const moves = getLegalMoves(displayFen);
+      highlightedSquares = moves.filter(m => m.from === sq).map(m => m.to);
     }
   }
 
@@ -261,6 +276,7 @@
           flipped={isFlipped}
           size={boardWidth - 32}
           onSquareClick={handleSquareClick}
+          onSquareDrag={handleSquareDrag}
           onDrop={handleDrop}
         />
         <div class="board-footer">

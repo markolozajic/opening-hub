@@ -9,6 +9,7 @@
     flipped = false,
     size = 480,
     onSquareClick = (_sq: string) => {},
+    onSquareDrag = (_sq: string) => {},
     onDrop = (_from: string, _to: string) => {},
   } = $props();
 
@@ -25,6 +26,13 @@
   let dragSvgPos = $state<{x: number, y: number} | null>(null);
   let isDragging = $state(false);
   let pointerId = $state<number | null>(null);
+  let pointerSvgPos = $state<{x: number, y: number} | null>(null);
+
+  let hoverDestSq = $derived.by(() => {
+    if (!pointerSvgPos) return null;
+    const info = sqFromPoint(pointerSvgPos);
+    return info?.sq ?? null;
+  });
 
   const DRAG_THRESHOLD = 5;
 
@@ -63,9 +71,10 @@
   }
 
   function handlePointerMove(e: PointerEvent) {
-    if (!dragFromSq || e.pointerId !== pointerId) return;
     const svg = e.currentTarget as SVGSVGElement;
     const pt = getSvgPoint(svg, e.clientX, e.clientY);
+    pointerSvgPos = pt;
+    if (!dragFromSq || e.pointerId !== pointerId) return;
     dragSvgPos = pt;
 
     if (!isDragging && dragStartSvgPos) {
@@ -73,6 +82,7 @@
       const dy = pt.y - dragStartSvgPos.y;
       if (Math.sqrt(dx * dx + dy * dy) >= DRAG_THRESHOLD) {
         isDragging = true;
+        if (dragFromSq) onSquareDrag(dragFromSq);
       }
     }
   }
@@ -123,6 +133,7 @@
   onpointerdown={handlePointerDown}
   onpointermove={handlePointerMove}
   onpointerup={handlePointerUp}
+  onpointerleave={() => pointerSvgPos = null}
   role="grid"
   tabindex={interactive ? 0 : -1}
   onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); } }}
@@ -138,6 +149,7 @@
       {@const isSel = selectedDisplay && selectedDisplay.displayFile === df && selectedDisplay.displayRank === dr}
       {@const isHigh = getDisplayHighlighted(df, dr)}
       {@const isDragSq = isDragSource(df, dr)}
+      {@const isHoverDest = hoverDestSq === sq && isHigh}
 
       <rect
         x={df * cellSize}
@@ -168,12 +180,22 @@
         />
       {/if}
 
-      {#if isHigh}
+      {#if isHigh && !isHoverDest}
         <circle
           cx={df * cellSize + cellSize / 2}
           cy={dr * cellSize + cellSize / 2}
           r={cellSize * 0.14}
           fill="rgba(0,0,0,0.25)"
+        />
+      {/if}
+
+      {#if isHoverDest}
+        <rect
+          x={df * cellSize}
+          y={dr * cellSize}
+          width={cellSize}
+          height={cellSize}
+          fill="rgba(0,0,0,0.35)"
         />
       {/if}
     {/each}
