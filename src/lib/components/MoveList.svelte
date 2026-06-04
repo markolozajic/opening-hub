@@ -1,14 +1,14 @@
 <script lang="ts">
   import { nav } from '../state/navigation.svelte';
   import { labelData } from '../state/labels.svelte';
-  import { getPosition, setMoveMarker, setMoveLabel, setComfortLevel, setSortMode, setMoveOrder } from '../db/positionStore.svelte';
+  import { getPosition, setMoveMarker, setMoveLabel, setComfortLevel, setMoveOrder } from '../db/positionStore.svelte';
   import { findMoveNumber, findAllTranspositionPaths } from '../utils/positionQueries';
-  import type { MovePathStep, MoveMarker, ComfortLevel, MoveLabel, SortMode } from '../types';
+  import type { MovePathStep, MoveMarker, ComfortLevel, MoveLabel } from '../types';
   import { COMFORT_COLORS, COMFORT_LABELS, MOVE_LABELS } from '../constants';
   import { getComfort } from '../state/comfort.svelte';
   import { getNovelty } from '../state/novelty.svelte';
   import { getTurn } from '../utils/fen';
-  import { sortMoves, sortedMoveSans, formatNumberedSan } from '../utils/positionUtils';
+  import { sortMoves, formatNumberedSan } from '../utils/positionUtils';
   import MiniBoard from './MiniBoard.svelte';
   import ComfortBadge from './ComfortBadge.svelte';
   import { navigateTo, navigatePath } from '../state/navigation.svelte';
@@ -38,7 +38,7 @@
       : []
   );
 
-  let sortMode = $derived(position?.sortMode ?? 'comfort');
+  let sortMode = $derived(nav.sortMode);
   let sortedMoves = $derived(sortMoves(position?.moveOrder, moves, sortMode));
 
   let depth = $derived(findMoveNumber(nav.activeRepertoire, nav.currentFen));
@@ -195,17 +195,8 @@
     metaDialogRef?.close();
   }
 
-  async function handleToggleSortMode() {
-    const rep = nav.activeRepertoire;
-    const fen = nav.currentFen;
-    const pos = getPosition(rep, fen);
-    if (!pos) return;
-    const newMode: SortMode = sortMode === 'comfort' ? 'manual' : 'comfort';
-    if (newMode === 'manual' && (!pos.moveOrder || pos.moveOrder.length === 0)) {
-      const currentSans = sortedMoveSans('comfort', undefined, moves);
-      await setMoveOrder(rep, fen, currentSans);
-    }
-    await setSortMode(rep, fen, newMode);
+  function handleToggleSortMode() {
+    nav.sortMode = sortMode === 'comfort' ? 'manual' : 'comfort';
   }
 </script>
 

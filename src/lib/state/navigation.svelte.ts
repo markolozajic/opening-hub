@@ -1,4 +1,4 @@
-import type { Repertoire } from '../types';
+import type { Repertoire, SortMode } from '../types';
 import { getRootFen, getPosition, positionCache } from '../db/positionStore.svelte';
 import { buildMovePath } from '../utils/positionQueries';
 import type { MovePathStep } from '../types';
@@ -11,6 +11,7 @@ export const nav = $state({
   forwardStack: [] as MovePathStep[],
   currentPath: [] as MovePathStep[],
   showMoveChooser: false,
+  sortMode: 'comfort' as SortMode,
 });
 
 const parentIndex = $derived.by(() => {

@@ -1,9 +1,9 @@
 import { Chess } from 'chess.js';
 import { db } from './schema';
-import type { Position, Repertoire, ComfortLevel, SortMode, Link, PgnAttachment, MoveLabel, MoveMarker } from '../types';
+import type { Position, Repertoire, ComfortLevel, Link, PgnAttachment, MoveLabel, MoveMarker } from '../types';
 import { cacheKey, toChessJsFen, getTurn, normalizeFen } from '../utils/fen';
 import { STARTING_FEN, STARTING_POSITION_COMMENT } from '../constants';
-import { migrateMoveLabels, migrateComfortCoherence, migrateRootComment, migrateSortMode } from './migrations';
+import { migrateMoveLabels, migrateComfortCoherence, migrateRootComment } from './migrations';
 import { findMoveNumber } from '../utils/positionQueries';
 import { formatNumberedSan } from '../utils/positionUtils';
 import { toPlain } from '../utils/helpers';
@@ -64,7 +64,6 @@ export async function initPositionStore(): Promise<void> {
   await migrateMoveLabels();
   await migrateComfortCoherence();
   await migrateRootComment();
-  await migrateSortMode();
 }
 
 export function getRootFen(): string {
@@ -196,14 +195,6 @@ export async function setMoveOrder(repertoire: Repertoire, fen: string, order: s
   const pos = getPosition(repertoire, fen);
   if (!pos) return;
   pos.moveOrder = order;
-  pos.updatedAt = Date.now();
-  await db.positions.put(toPlain(pos));
-}
-
-export async function setSortMode(repertoire: Repertoire, fen: string, mode: SortMode): Promise<void> {
-  const pos = getPosition(repertoire, fen);
-  if (!pos) return;
-  pos.sortMode = mode;
   pos.updatedAt = Date.now();
   await db.positions.put(toPlain(pos));
 }

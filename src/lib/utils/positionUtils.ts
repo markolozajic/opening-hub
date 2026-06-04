@@ -21,14 +21,6 @@ export function sortMoves<T extends { san: string; comfort: ComfortLevel | null 
   return [...moves].sort((a, b) => comfortRank(a.comfort) - comfortRank(b.comfort));
 }
 
-export function sortedMoveSans(
-  sortMode: SortMode | undefined,
-  moveOrder: string[] | undefined,
-  moves: { san: string; comfort: ComfortLevel | null }[],
-): string[] {
-  return sortMoves(moveOrder, moves, sortMode).map(m => m.san);
-}
-
 export function formatNumberedSan(depth: number | null, turn: 'w' | 'b', san: string): string {
   if (depth === null) return san;
   const moveNum = Math.floor(depth / 2) + 1;

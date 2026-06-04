@@ -34,7 +34,6 @@ export interface Position {
   moveOrder?: string[];
   dismissedTranspositions?: string[];
   comment?: string;
-  sortMode?: SortMode;
   comfortLevel?: ComfortLevel;
   moves: Record<string, MoveEdge>;
   links: Link[];
