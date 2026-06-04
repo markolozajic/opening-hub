@@ -141,9 +141,8 @@
       const turn = getTurn(displayFen);
       const depth = findMoveNumber(nav.activeRepertoire, displayFen);
       const isSequenceContinuation = turn === 'b' && displayFen === lastInsertToFen;
-      const moveText = isSequenceContinuation
-        ? san
-        : formatNumberedSan(depth, turn as 'w' | 'b', san);
+      const baseText = isSequenceContinuation ? san : formatNumberedSan(depth, turn as 'w' | 'b', san);
+      const moveText = baseText + (current?.moves[san]?.marker ?? '');
       pendingMoveInsert = { san: moveText, fen: afterFen };
       queueMicrotask(() => { pendingMoveInsert = null; });
       editBoardFen = afterFen;
@@ -281,7 +280,7 @@
           <div class="move-history">
             {#each movePath as step, i}
               <button class="history-step" onclick={() => navigateTo(step.toFen)}>
-                {i % 2 === 0 ? `${Math.floor(i / 2) + 1}. ${step.san}` : step.san}
+                {i % 2 === 0 ? `${Math.floor(i / 2) + 1}. ${step.san}` : step.san}{step.marker}
               </button>
             {/each}
           </div>
@@ -409,12 +408,12 @@
     display: flex; flex-wrap: wrap; justify-content: center;
     column-gap: 0.5em; padding: 0 0.5rem; font-size: 0.875rem;
     font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
-    color: var(--text); line-height: 1.5;
+    color: var(--text); line-height: 1.5; user-select: text;
   }
   .history-step {
     background: none; border: none; padding: 0;
     font-family: inherit; font-size: inherit; color: var(--accent);
-    cursor: pointer; white-space: nowrap;
+    cursor: pointer; white-space: nowrap; user-select: text;
   }
   .history-step:hover { text-decoration: underline; }
 

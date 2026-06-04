@@ -1,7 +1,7 @@
 import type { Repertoire } from '../types';
 import { getRootFen, getPosition, positionCache } from '../db/positionStore.svelte';
 import { buildMovePath } from '../utils/positionQueries';
-import type { MovePathStep } from '../utils/positionQueries';
+import type { MovePathStep } from '../types';
 import { cacheKey } from '../utils/fen';
 
 export const nav = $state({
@@ -46,7 +46,7 @@ export function navigatePath(path: MovePathStep[], targetIndex: number): void {
   if (start > targetIndex) return;
   for (let i = start; i <= targetIndex; i++) {
     nav.backStack.push(nav.currentFen);
-    nav.currentPath.push({ fen: path[i].fen, toFen: path[i].toFen, san: path[i].san });
+    nav.currentPath.push({ fen: path[i].fen, toFen: path[i].toFen, san: path[i].san, marker: path[i].marker });
     nav.currentFen = path[i].toFen;
   }
 }

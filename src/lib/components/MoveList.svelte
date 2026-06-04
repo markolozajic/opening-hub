@@ -1,16 +1,16 @@
 <script lang="ts">
   import { nav } from '../state/navigation.svelte';
   import { labelData } from '../state/labels.svelte';
-  import { getPosition } from '../db/positionStore.svelte';
+  import { getPosition, setMoveMarker } from '../db/positionStore.svelte';
   import { findMoveNumber, findAllTranspositionPaths } from '../utils/positionQueries';
-  import type { MovePathStep } from '../utils/positionQueries';
+  import type { MovePathStep, MoveMarker } from '../types';
   import { getComfort } from '../state/comfort.svelte';
   import { getTurn } from '../utils/fen';
   import { sortMoves, formatNumberedSan } from '../utils/positionUtils';
   import MiniBoard from './MiniBoard.svelte';
   import ComfortBadge from './ComfortBadge.svelte';
   import { navigateTo, navigatePath } from '../state/navigation.svelte';
-  import { Trash2, GripVertical, Eye, X } from '@lucide/svelte';
+  import { Trash2, GripVertical, Eye, X, Pencil } from '@lucide/svelte';
 
   let {
     onDeleteMove = undefined as ((san: string) => void) | undefined,
@@ -29,6 +29,7 @@
           comment: edge.comment,
           autoDetected: edge.autoDetected,
           label: labelData.moveLabels[nav.currentFen]?.[san],
+          marker: edge.marker,
           childPos: getPosition(nav.activeRepertoire, edge.toFen),
           comfort: getComfort(nav.activeRepertoire, edge.toFen),
         }))
@@ -113,6 +114,7 @@
         fen: step.fen,
         san: step.san,
         toFen: step.toFen,
+        marker: step.marker,
       }))
     );
     showTranspositionsFor = san;
@@ -126,6 +128,35 @@
 
   function handlePathStepClick(path: MovePathStep[], targetIndex: number) {
     navigatePath(path, targetIndex);
+  }
+
+  let editMarkerForSan = $state<string | null>(null);
+  let editMarkerCurrent = $state<MoveMarker | undefined>(undefined);
+  let markerDialogRef = $state<HTMLDialogElement | null>(null);
+
+  $effect(() => {
+    if (markerDialogRef && editMarkerForSan !== null) {
+      markerDialogRef.showModal();
+    }
+  });
+
+  function handleEditMetadata(san: string) {
+    editMarkerCurrent = position?.moves[san]?.marker;
+    editMarkerForSan = san;
+  }
+
+  async function handleSetMarker(marker: MoveMarker | undefined) {
+    if (editMarkerForSan === null) return;
+    await setMoveMarker(nav.activeRepertoire, nav.currentFen, editMarkerForSan, marker);
+    editMarkerForSan = null;
+    editMarkerCurrent = undefined;
+    markerDialogRef?.close();
+  }
+
+  function closeMarkerDialog() {
+    editMarkerForSan = null;
+    editMarkerCurrent = undefined;
+    markerDialogRef?.close();
   }
 </script>
 
@@ -158,6 +189,7 @@
           <button class="move-card" onclick={() => handleNavigate(move.toFen, move.san, move.autoDetected)}>
             <div class="move-header">
               <span class="move-san">{move.displaySan}</span>
+              {#if move.marker}<span class="move-marker">{move.marker}</span>{/if}
               <ComfortBadge level={move.comfort} size={8} />
             </div>
             <MiniBoard fen={move.toFen} flipped={isFlipped} size={100} />
@@ -172,10 +204,10 @@
             <div class="action-btns">
               <button
                 class="action-btn"
-                onclick={() => onDeleteMove(move.san)}
-                title="Delete move"
+                onclick={() => handleEditMetadata(move.san)}
+                title="Edit move metadata"
               >
-                <Trash2 size={12} />
+                <Pencil size={12} />
               </button>
               <button
                 class="action-btn"
@@ -183,6 +215,13 @@
                 title="Show transposition paths"
               >
                 <Eye size={12} />
+              </button>
+              <button
+                class="action-btn"
+                onclick={() => onDeleteMove(move.san)}
+                title="Delete move"
+              >
+                <Trash2 size={12} />
               </button>
             </div>
           {/if}
@@ -219,13 +258,48 @@
             <div class="path-moves">
               {#each path as step, j}
                 <button class="path-step" onclick={() => handlePathStepClick(path, j)}>
-                  {j % 2 === 0 ? `${Math.floor(j / 2) + 1}. ` : ''}{step.san}
+                  {j % 2 === 0 ? `${Math.floor(j / 2) + 1}. ` : ''}{step.san}{step.marker}
                 </button>
               {/each}
             </div>
           </div>
         {/each}
       {/if}
+    </div>
+  {/if}
+</dialog>
+
+<dialog
+  class="marker-dialog"
+  bind:this={markerDialogRef}
+  onclick={(e) => { if (e.target === markerDialogRef) closeMarkerDialog(); }}
+  onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); closeMarkerDialog(); } }}
+  onclose={closeMarkerDialog}
+>
+  {#if editMarkerForSan !== null}
+    <div class="dialog-header">
+      <h3 class="dialog-title">Marker for {editMarkerForSan}</h3>
+      <button class="btn-icon" onclick={closeMarkerDialog} title="Close">
+        <X size={14} />
+      </button>
+    </div>
+    <div class="dialog-body marker-options">
+      {#each ['!!', '!', '!?', '?!', '?', '??'] as marker}
+        {@const isSelected = editMarkerCurrent === marker}
+        <button
+          class="marker-btn"
+          class:selected={isSelected}
+          onclick={() => editMarkerCurrent = marker as MoveMarker}
+        >
+          {marker}
+        </button>
+      {/each}
+      <div class="marker-actions">
+        {#if editMarkerCurrent}
+          <button class="btn" onclick={async () => { await handleSetMarker(undefined); }}>Clear</button>
+        {/if}
+        <button class="btn primary" onclick={async () => { await handleSetMarker(editMarkerCurrent); }}>Save</button>
+      </div>
     </div>
   {/if}
 </dialog>
@@ -294,12 +368,11 @@
     padding: 0.25rem; border: 1px solid var(--border); border-radius: 4px;
     background: var(--surface1); color: var(--muted); cursor: pointer;
   }
-  .action-btn:hover { color: var(--danger, #ef4444); border-color: var(--danger, #ef4444); }
-  .action-btn:last-child:hover { color: var(--accent); border-color: var(--accent); }
+  .action-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .action-btn:last-child:hover { color: var(--danger, #ef4444); border-color: var(--danger, #ef4444); }
   .move-header { display: flex; align-items: center; gap: 0.375rem; }
-  .move-san {
-    font-weight: 600; font-size: 0.9375rem; color: var(--text-h);
-  }
+  .move-san { font-weight: 600; font-size: 0.9375rem; color: var(--text-h); }
+  .move-marker { font-weight: 600; font-size: 0.9375rem; color: var(--accent); }
   .move-comment { font-size: 0.6875rem; color: var(--text); line-height: 1.3; }
   .child-name { font-size: 0.6875rem; color: var(--accent); font-style: italic; }
 
@@ -334,12 +407,12 @@
   .path-moves {
     display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem;
     font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
-    font-size: 0.8125rem; color: var(--text-h); line-height: 1.5;
+    font-size: 0.8125rem; color: var(--text-h); line-height: 1.5; user-select: text;
   }
   .path-step {
     background: none; border: none; padding: 0;
     font-family: inherit; font-size: inherit; color: var(--accent);
-    cursor: pointer; white-space: nowrap;
+    cursor: pointer; white-space: nowrap; user-select: text;
   }
   .path-step:hover { text-decoration: underline; }
   .path-separator {
@@ -350,4 +423,33 @@
     color: var(--muted); border-radius: 4px; display: flex;
   }
   .btn-icon:hover { color: var(--text-h); background: var(--surface2); }
+
+  .marker-dialog {
+    border: 1px solid var(--border); border-radius: 8px; padding: 0;
+    background: var(--bg); color: var(--text); min-width: 260px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  }
+  .marker-dialog::backdrop { background: rgba(0,0,0,0.3); }
+  .marker-options {
+    display: flex; flex-wrap: wrap; gap: 0.375rem; justify-content: center;
+  }
+  .marker-btn {
+    padding: 0.5rem 0.75rem; border: 2px solid var(--border); border-radius: 6px;
+    background: var(--surface1); color: var(--text-h); cursor: pointer;
+    font-size: 1rem; font-weight: 600; font-family: inherit; min-width: 3rem;
+    transition: all 0.1s;
+  }
+  .marker-btn:hover { border-color: var(--accent); background: var(--surface2); }
+  .marker-btn.selected { border-color: var(--accent); background: var(--accent-bg); }
+  .marker-actions {
+    display: flex; gap: 0.5rem; justify-content: center; width: 100%; margin-top: 0.5rem;
+  }
+  .btn {
+    padding: 0.375rem 0.75rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--surface1); color: var(--text-h); cursor: pointer; font-size: 0.8125rem;
+    font-family: inherit;
+  }
+  .btn:hover { background: var(--surface2); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { opacity: 0.9; }
 </style>

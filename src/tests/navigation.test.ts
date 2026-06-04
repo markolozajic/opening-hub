@@ -33,7 +33,7 @@ import {
   switchRepertoire,
 } from '../lib/state/navigation.svelte';
 import { buildMovePath } from '../lib/utils/positionQueries';
-import type { MovePathStep } from '../lib/utils/positionQueries';
+import type { MovePathStep } from '../lib/types';
 
 function makeRoot(repertoire: Repertoire): Position {
   return {

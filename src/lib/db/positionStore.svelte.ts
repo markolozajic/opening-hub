@@ -1,18 +1,20 @@
 import { Chess } from 'chess.js';
 import { db } from './schema';
-import type { Position, Repertoire, ComfortLevel, Link, PgnAttachment, MoveLabel } from '../types';
+import type { Position, Repertoire, ComfortLevel, Link, PgnAttachment, MoveLabel, MoveMarker } from '../types';
 import { cacheKey, toChessJsFen, getTurn, normalizeFen } from '../utils/fen';
 import { STARTING_FEN } from '../constants';
-  import { migrateMoveLabels, migrateComfortCoherence, migrateUnlabeledMoves } from './migrations';
+import { migrateMoveLabels, migrateComfortCoherence } from './migrations';
 import { findMoveNumber } from '../utils/positionQueries';
+import { formatNumberedSan } from '../utils/positionUtils';
 
 export const positionCache: Record<string, Position> = $state({});
 
 function endsWithMove(name: string): boolean {
   const last = name.split(/[, ]+/).pop()?.trim() ?? '';
   const movePart = last.replace(/^(?:\d+\.\.\.?\s*)/, '');
-  return /^(?:[NBKRQO]?x?[a-h][1-8](?:=[NBKRQO])?[+#]?|O-O(?:-O)?[+#]?)$/.test(movePart)
-    || /^[a-h][1-8](?:=[NBKRQO])?[+#]?$/.test(movePart);
+  const stripped = movePart.replace(/[!?]+$/, '');
+  return /^(?:[NBKRQO]?x?[a-h][1-8](?:=[NBKRQO])?[+#]?|O-O(?:-O)?[+#]?)$/.test(stripped)
+    || /^[a-h][1-8](?:=[NBKRQO])?[+#]?$/.test(stripped);
 }
 
 function computeAutoName(
@@ -63,7 +65,6 @@ export async function initPositionStore(): Promise<void> {
   ensureRoot('black');
   await migrateMoveLabels();
   await migrateComfortCoherence();
-  await migrateUnlabeledMoves();
 }
 
 export function getRootFen(): string {
@@ -159,13 +160,18 @@ export async function addMove(repertoire: Repertoire, fromFen: string, san: stri
   const from = getOrCreatePosition(repertoire, fromFen);
   const to = getOrCreatePosition(repertoire, toFen);
 
+  if (from.moveOrder) {
+    from.moveOrder.push(san);
+  }
+  from.moves[san] = { toFen, comment };
+
   if (!to.name && to.autoNamed !== false) {
     const depth = findMoveNumber(repertoire, fromFen);
     let labeledSan: string | undefined;
     if (depth !== null) {
-      const moveNum = Math.floor(depth / 2) + 1;
       const turn = getTurn(fromFen);
-      labeledSan = turn === 'w' ? `${moveNum}. ${san}` : `${moveNum}... ${san}`;
+      const marker = from.moves[san].marker ?? '';
+      labeledSan = formatNumberedSan(depth, turn as 'w' | 'b', san) + marker;
     }
     to.name = computeAutoName(from.name, from.autoNamed ?? false, san, labeledSan || san, getTurn(fromFen) as 'w' | 'b');
     to.autoNamed = true;
@@ -173,10 +179,6 @@ export async function addMove(repertoire: Repertoire, fromFen: string, san: stri
     await db.positions.put(toPlain(to));
   }
 
-  if (from.moveOrder) {
-    from.moveOrder.push(san);
-  }
-  from.moves[san] = { toFen, comment };
   from.updatedAt = Date.now();
   await db.positions.put(toPlain(from));
 }
@@ -204,6 +206,18 @@ export async function setMoveLabel(repertoire: Repertoire, fen: string, san: str
     pos.moves[san].label = label;
   } else {
     delete pos.moves[san].label;
+  }
+  pos.updatedAt = Date.now();
+  await db.positions.put(toPlain(pos));
+}
+
+export async function setMoveMarker(repertoire: Repertoire, fen: string, san: string, marker: MoveMarker | undefined): Promise<void> {
+  const pos = getPosition(repertoire, fen);
+  if (!pos || !pos.moves[san]) return;
+  if (marker) {
+    pos.moves[san].marker = marker;
+  } else {
+    delete pos.moves[san].marker;
   }
   pos.updatedAt = Date.now();
   await db.positions.put(toPlain(pos));

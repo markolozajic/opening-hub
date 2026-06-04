@@ -55,7 +55,7 @@ describe('basic comfort', () => {
     expect(getComfort('white', A)).toBeNull();
   });
 
-  it('returns the worst comfort in the subtree (pessimistic)', () => {
+  it('uses the deepest explicit comfort level', () => {
     mockPositionCache[cacheKey('white', A)] = makePos('white', A, {
       e5: { toFen: B },
     });
@@ -66,6 +66,33 @@ describe('basic comfort', () => {
 
     expect(getComfort('white', A)).toBe('uncomfortable');
     expect(getComfort('white', ROOT)).toBe('uncomfortable');
+  });
+
+  it('leaf comfort overrides a parent comfort on the same branch', () => {
+    mockPositionCache[cacheKey('white', A)] = makePos('white', A, {
+      e5: { toFen: B },
+    }, { comfortLevel: 'moderate' });
+    mockPositionCache[cacheKey('white', B)] = makePos('white', B, {}, { comfortLevel: 'easy' });
+    mockPositionCache[cacheKey('white', ROOT)] = makePos('white', ROOT, {
+      e4: { toFen: A, label: 'main' },
+    });
+
+    expect(getComfort('white', A)).toBe('easy');
+    expect(getComfort('white', ROOT)).toBe('easy');
+  });
+
+  it('among multiple leaves the worst wins', () => {
+    mockPositionCache[cacheKey('white', A)] = makePos('white', A, {
+      e5: { toFen: B },
+      Nf6: { toFen: C },
+    });
+    mockPositionCache[cacheKey('white', B)] = makePos('white', B, {}, { comfortLevel: 'uncomfortable' });
+    mockPositionCache[cacheKey('white', C)] = makePos('white', C, {}, { comfortLevel: 'easy' });
+    mockPositionCache[cacheKey('white', ROOT)] = makePos('white', ROOT, {
+      e4: { toFen: A, label: 'main' },
+    });
+
+    expect(getComfort('white', A)).toBe('uncomfortable');
   });
 });
 

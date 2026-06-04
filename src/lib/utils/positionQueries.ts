@@ -1,13 +1,7 @@
-import type { Position, Repertoire } from '../types';
+import type { Position, Repertoire, MovePathStep } from '../types';
 import { cacheKey } from './fen';
 import { positionCache, getPosition } from '../db/positionStore.svelte';
 import { STARTING_FEN } from '../constants';
-
-export interface MovePathStep {
-  fen: string;
-  toFen: string;
-  san: string;
-}
 
 export function findMoveNumber(repertoire: Repertoire, fen: string): number | null {
   const rootFen = STARTING_FEN;
@@ -75,7 +69,9 @@ export function buildMovePath(repertoire: Repertoire, targetFen: string): MovePa
   while (current !== rootFen) {
     const entry = parentMap.get(current);
     if (!entry) break;
-    path.unshift({ fen: entry.parentFen, toFen: current, san: entry.san });
+    const parentPos = positionCache[cacheKey(repertoire, entry.parentFen)];
+    const marker = parentPos?.moves[entry.san]?.marker;
+    path.unshift({ fen: entry.parentFen, toFen: current, san: entry.san, marker });
     current = entry.parentFen;
   }
   return path;
@@ -98,7 +94,7 @@ export function findAllTranspositionPaths(repertoire: Repertoire, targetFen: str
     for (const [san, edge] of Object.entries(pos.moves)) {
       if (visited.has(edge.toFen)) continue;
       visited.add(edge.toFen);
-      path.push({ fen, toFen: edge.toFen, san });
+      path.push({ fen, toFen: edge.toFen, san, marker: edge.marker });
       dfs(edge.toFen, path);
       path.pop();
       visited.delete(edge.toFen);

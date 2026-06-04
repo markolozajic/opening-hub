@@ -7,35 +7,45 @@ const comfortCache: Record<string, ComfortLevel | null> = {};
 
 const PRIORITY_ORDER: ComfortLevel[] = ['easy', 'comfortable', 'moderate', 'uncomfortable', 'struggling'];
 
-function comfortPriority(level: ComfortLevel | null): number {
-  return level ? (COMFORT_PRIORITY[level] ?? -1) : -1;
-}
-
 function fromPriority(p: number): ComfortLevel | null {
   return p >= 0 && p < PRIORITY_ORDER.length ? PRIORITY_ORDER[p] : null;
 }
 
+function visibleChildren(pos: { moves: Record<string, { toFen: string; label?: string }> }, fen: string, ourSide: string): string[] {
+  const children: string[] = [];
+  for (const [san, edge] of Object.entries(pos.moves)) {
+    const turn = getTurn(fen);
+    if (turn === ourSide && (edge.label === 'alternative' || edge.label === 'avoid')) continue;
+    children.push(edge.toFen);
+  }
+  return children;
+}
+
+function collectLeafComforts(repertoire: Repertoire, fen: string, ourSide: string, visited: Set<string>): number[] {
+  if (visited.has(fen)) return [];
+  visited.add(fen);
+
+  const pos = getPosition(repertoire, fen);
+  if (!pos) return [];
+
+  const children = visibleChildren(pos, fen, ourSide);
+
+  if (children.length === 0) {
+    return pos.comfortLevel != null ? [COMFORT_PRIORITY[pos.comfortLevel]] : [];
+  }
+
+  const results: number[] = [];
+  for (const child of children) {
+    results.push(...collectLeafComforts(repertoire, child, ourSide, visited));
+  }
+  return results;
+}
+
 function computeComfortFor(repertoire: Repertoire, fen: string): ComfortLevel | null {
   const ourSide = repertoire === 'white' ? 'w' : 'b';
-  const visited = new Set<string>();
-  const stack = [fen];
-  let worst = -1;
-  while (stack.length > 0) {
-    const current = stack.pop()!;
-    if (visited.has(current)) continue;
-    visited.add(current);
-    const pos = getPosition(repertoire, current);
-    if (!pos) continue;
-    const p = comfortPriority(pos.comfortLevel ?? null);
-    if (p > worst) worst = p;
-    for (const [san, edge] of Object.entries(pos.moves)) {
-      if (visited.has(edge.toFen)) continue;
-      const turn = getTurn(current);
-      if (turn === ourSide && edge.label !== 'main') continue;
-      stack.push(edge.toFen);
-    }
-  }
-  return fromPriority(worst);
+  const leafValues = collectLeafComforts(repertoire, fen, ourSide, new Set());
+  if (leafValues.length === 0) return null;
+  return fromPriority(Math.max(...leafValues));
 }
 
 export function getComfort(repertoire: Repertoire, fen: string): ComfortLevel | null {

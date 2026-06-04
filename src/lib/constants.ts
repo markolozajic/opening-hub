@@ -19,9 +19,17 @@ export const MOVE_LABELS: Record<string, string> = {
   avoid: 'Avoid',
 };
 export const MOVE_LABEL_COLORS: Record<string, string> = {
-  main: '#d97706',
+  main: '#f1cc27',
   alternative: '#2563eb',
   avoid: '#dc2626',
+};
+export const MOVE_MARKERS: Record<string, string> = {
+  '?': '?',
+  '!': '!',
+  '!?': '!?',
+  '?!': '?!',
+  '??': '??',
+  '!!': '!!',
 };
 export const COMFORT_RANK: Record<string, number> = {
   struggling: 0,

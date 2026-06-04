@@ -35,6 +35,7 @@
       comfort: getComfort(nav.activeRepertoire, edge.toFen),
       childName: getPosition(nav.activeRepertoire, edge.toFen)?.name,
       label: labelData.moveLabels[nav.currentFen]?.[san],
+      marker: edge.marker,
     }));
     return sortMoves(pos.moveOrder, raw);
   }
@@ -97,7 +98,7 @@
         onclick={() => chooseMove(child.toFen)}
         onmouseenter={() => selectedIndex = i}
       >
-        <span class="child-san">{child.san}</span>
+        <span class="child-san">{child.san}{child.marker}</span>
         <span class="child-label-dot" class:dot-main={child.label === 'main'} class:dot-alt={child.label === 'alternative'} class:dot-avoid={child.label === 'avoid'}></span>
         <ComfortBadge level={child.comfort} size={10} />
         {#if child.childName}

@@ -1,8 +1,7 @@
 import type { MoveLabel, Repertoire } from '../types';
-import { getPosition, positionCache } from '../db/positionStore.svelte';
+import { getPosition } from '../db/positionStore.svelte';
 import { getTurn } from '../utils/fen';
 import { STARTING_FEN } from '../constants';
-import { cacheKey } from '../utils/fen';
 
 export const labelData = $state<{
   positionLabels: Record<string, MoveLabel | null>;
@@ -84,15 +83,6 @@ export function recomputeLabels(repertoire: Repertoire): void {
     } else {
       if (vals.every(l => l === 'avoid')) {
         issues.push({ fen, name: pos.name });
-      }
-    }
-  }
-
-  for (const [key, pos] of Object.entries(positionCache)) {
-    if (!key.startsWith(repertoire + '|')) continue;
-    for (const [san, edge] of Object.entries(pos.moves)) {
-      if (edge.label === undefined) {
-        throw new Error(`Move "${san}" at position "${pos.fen}" in ${repertoire} repertoire has no label`);
       }
     }
   }
