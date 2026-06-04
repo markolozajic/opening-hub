@@ -1,5 +1,3 @@
-import type { VerboseMove } from '../types';
-
 export const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 export const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
@@ -34,10 +32,6 @@ export function parseFenBoard(fen: string): (string | null)[][] {
 
 export function getSquareColor(file: number, rank: number): 'light' | 'dark' {
   return (file + rank) % 2 === 0 ? 'light' : 'dark';
-}
-
-export function isLegalDestination(sq: string, moves: VerboseMove[]): boolean {
-  return moves.some(m => m.to === sq);
 }
 
 export function displayToReal(

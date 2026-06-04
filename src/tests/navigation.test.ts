@@ -2,6 +2,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { cacheKey } from '../lib/utils/fen';
 import { STARTING_FEN } from '../lib/constants';
 import type { Position, Repertoire } from '../lib/types';
+import { makeRoot, makePos } from './helpers';
 
 const { mockPositionCache, mockGetRootFen, mockGetPosition } = vi.hoisted(() => {
   const cache: Record<string, Position> = {};
@@ -34,34 +35,6 @@ import {
 } from '../lib/state/navigation.svelte';
 import { buildMovePath } from '../lib/utils/positionQueries';
 import type { MovePathStep } from '../lib/types';
-
-function makeRoot(repertoire: Repertoire): Position {
-  return {
-    repertoire,
-    fen: STARTING_FEN,
-    moves: {},
-    links: [],
-    pgnAttachments: [],
-    createdAt: 0,
-    updatedAt: 0,
-  };
-}
-
-function makePos(repertoire: Repertoire, fen: string, moves: Record<string, { toFen: string }>): Position {
-  const edges: Record<string, { toFen: string }> = {};
-  for (const [san, edge] of Object.entries(moves)) {
-    edges[san] = { toFen: edge.toFen };
-  }
-  return {
-    repertoire,
-    fen,
-    moves: edges,
-    links: [],
-    pgnAttachments: [],
-    createdAt: 0,
-    updatedAt: 0,
-  };
-}
 
 beforeEach(() => {
   for (const key of Object.keys(mockPositionCache)) {

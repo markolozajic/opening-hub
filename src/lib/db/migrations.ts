@@ -2,13 +2,10 @@ import type { Position, Repertoire } from '../types';
 import { cacheKey, getTurn } from '../utils/fen';
 import { db } from './schema';
 import { positionCache } from './positionStore.svelte';
+import { toPlain } from '../utils/helpers';
 
 const MIGRATION_KEY = 'opening-hub-label-migrated';
 const COMFORT_MIGRATION_KEY = 'opening-hub-comfort-migrated';
-
-function toPlain(pos: Position): Position {
-  return JSON.parse(JSON.stringify(pos));
-}
 
 export async function migrateMoveLabels(): Promise<void> {
   if (localStorage.getItem(MIGRATION_KEY)) return;

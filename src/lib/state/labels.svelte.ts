@@ -15,6 +15,32 @@ export const labelData = $state<{
   issuePositions: [],
 });
 
+function detectIssues(
+  repertoire: Repertoire,
+  positionLabels: Record<string, MoveLabel | null>,
+  moveLabels: Record<string, Record<string, MoveLabel>>,
+): Array<{ fen: string; name?: string }> {
+  const issues: Array<{ fen: string; name?: string }> = [];
+  for (const [fen, label] of Object.entries(positionLabels)) {
+    const pos = getPosition(repertoire, fen);
+    if (!pos || Object.keys(pos.moves).length === 0) continue;
+    if (label === 'avoid') continue;
+    const ml = moveLabels[fen];
+    if (!ml) continue;
+    const vals = Object.values(ml);
+    if (label === 'main') {
+      if (!vals.some(l => l === 'main')) {
+        issues.push({ fen, name: pos.name });
+      }
+    } else {
+      if (vals.every(l => l === 'avoid')) {
+        issues.push({ fen, name: pos.name });
+      }
+    }
+  }
+  return issues;
+}
+
 export function recomputeLabels(repertoire: Repertoire): void {
   const rootFen = STARTING_FEN;
   const newPositionLabels: Record<string, MoveLabel | null> = {};
@@ -68,24 +94,7 @@ export function recomputeLabels(repertoire: Repertoire): void {
     }
   }
 
-  const issues: Array<{ fen: string; name?: string }> = [];
-  for (const [fen, label] of Object.entries(newPositionLabels)) {
-    const pos = getPosition(repertoire, fen);
-    if (!pos || Object.keys(pos.moves).length === 0) continue;
-    if (label === 'avoid') continue;
-    const ml = newMoveLabels[fen];
-    if (!ml) continue;
-    const vals = Object.values(ml);
-    if (label === 'main') {
-      if (!vals.some(l => l === 'main')) {
-        issues.push({ fen, name: pos.name });
-      }
-    } else {
-      if (vals.every(l => l === 'avoid')) {
-        issues.push({ fen, name: pos.name });
-      }
-    }
-  }
+  const issues = detectIssues(repertoire, newPositionLabels, newMoveLabels);
 
   labelData.positionLabels = newPositionLabels;
   labelData.moveLabels = newMoveLabels;

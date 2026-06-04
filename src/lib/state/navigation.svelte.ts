@@ -13,6 +13,18 @@ export const nav = $state({
   showMoveChooser: false,
 });
 
+const parentIndex = $derived.by(() => {
+  const index = new Map<string, string>();
+  const prefix = nav.activeRepertoire + '|';
+  for (const [key, pos] of Object.entries(positionCache)) {
+    if (!key.startsWith(prefix)) continue;
+    for (const edge of Object.values(pos.moves)) {
+      index.set(edge.toFen, pos.fen);
+    }
+  }
+  return index;
+});
+
 export function switchRepertoire(r: Repertoire): void {
   if (r === nav.activeRepertoire) return;
   nav.activeRepertoire = r;
@@ -118,14 +130,7 @@ export function cancelMoveChooser(): void {
 }
 
 function findParent(repertoire: Repertoire, fen: string): string | null {
-  const prefix = repertoire + '|';
-  for (const [key, pos] of Object.entries(positionCache)) {
-    if (!key.startsWith(prefix)) continue;
-    for (const edge of Object.values(pos.moves)) {
-      if (edge.toFen === fen) return pos.fen;
-    }
-  }
-  return null;
+  return parentIndex.get(fen) ?? null;
 }
 
 export function handleKeyDown(e: KeyboardEvent): void {

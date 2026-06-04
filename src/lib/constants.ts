@@ -23,22 +23,14 @@ export const MOVE_LABEL_COLORS: Record<string, string> = {
   alternative: '#2563eb',
   avoid: '#dc2626',
 };
-export const MOVE_MARKERS: Record<string, string> = {
-  '?': '?',
-  '!': '!',
-  '!?': '!?',
-  '?!': '?!',
-  '??': '??',
-  '!!': '!!',
-};
-export const COMFORT_RANK: Record<string, number> = {
+export const COMFORT_VALUE: Record<string, number> = {
   struggling: 0,
   uncomfortable: 1,
   moderate: 2,
   comfortable: 3,
   easy: 4,
 };
-export const COMFORT_PRIORITY: Record<string, number> = {
+export const COMFORT_SEVERITY: Record<string, number> = {
   easy: 0,
   comfortable: 1,
   moderate: 2,

@@ -6,6 +6,7 @@ import { STARTING_FEN } from '../constants';
 import { migrateMoveLabels, migrateComfortCoherence } from './migrations';
 import { findMoveNumber } from '../utils/positionQueries';
 import { formatNumberedSan } from '../utils/positionUtils';
+import { toPlain } from '../utils/helpers';
 
 export const positionCache: Record<string, Position> = $state({});
 
@@ -34,11 +35,7 @@ function computeAutoName(
   return parentName + ', ' + labeledSan;
 }
 
-function toPlain(pos: Position): Position {
-  return JSON.parse(JSON.stringify(pos));
-}
-
-function ensureRoot(repertoire: Repertoire): void {
+async function ensureRoot(repertoire: Repertoire): Promise<void> {
   const rootFen = getRootFen();
   const key = cacheKey(repertoire, rootFen);
   if (positionCache[key]) return;
@@ -53,7 +50,7 @@ function ensureRoot(repertoire: Repertoire): void {
     updatedAt: now,
   };
   positionCache[key] = root;
-  db.positions.put(toPlain(root));
+  await db.positions.put(toPlain(root));
 }
 
 export async function initPositionStore(): Promise<void> {
@@ -156,28 +153,37 @@ export async function setPositionComment(repertoire: Repertoire, fen: string, co
   await db.positions.put(toPlain(pos));
 }
 
+async function autoNameChild(
+  repertoire: Repertoire,
+  fromFen: string,
+  san: string,
+  from: Position,
+  to: Position,
+): Promise<void> {
+  if (to.name || to.autoNamed === false) return;
+  const depth = findMoveNumber(repertoire, fromFen);
+  const turn = getTurn(fromFen) as 'w' | 'b';
+  const labeledSan = depth !== null
+    ? formatNumberedSan(depth, turn, san) + (from.moves[san].marker ?? '')
+    : san;
+  to.name = computeAutoName(from.name, from.autoNamed ?? false, san, labeledSan, turn);
+  to.autoNamed = true;
+  to.updatedAt = Date.now();
+  await db.positions.put(toPlain(to));
+}
+
 export async function addMove(repertoire: Repertoire, fromFen: string, san: string, toFen: string, comment?: string): Promise<void> {
-  const from = getOrCreatePosition(repertoire, fromFen);
-  const to = getOrCreatePosition(repertoire, toFen);
+  await getOrCreatePosition(repertoire, fromFen);
+  await getOrCreatePosition(repertoire, toFen);
+  const from = getPosition(repertoire, fromFen)!;
+  const to = getPosition(repertoire, toFen)!;
 
   if (from.moveOrder) {
     from.moveOrder.push(san);
   }
   from.moves[san] = { toFen, comment };
 
-  if (!to.name && to.autoNamed !== false) {
-    const depth = findMoveNumber(repertoire, fromFen);
-    let labeledSan: string | undefined;
-    if (depth !== null) {
-      const turn = getTurn(fromFen);
-      const marker = from.moves[san].marker ?? '';
-      labeledSan = formatNumberedSan(depth, turn as 'w' | 'b', san) + marker;
-    }
-    to.name = computeAutoName(from.name, from.autoNamed ?? false, san, labeledSan || san, getTurn(fromFen) as 'w' | 'b');
-    to.autoNamed = true;
-    to.updatedAt = Date.now();
-    await db.positions.put(toPlain(to));
-  }
+  await autoNameChild(repertoire, fromFen, san, from, to);
 
   from.updatedAt = Date.now();
   await db.positions.put(toPlain(from));
@@ -266,18 +272,19 @@ export async function removePgnAttachment(repertoire: Repertoire, fen: string, a
 }
 
 export async function deletePosition(repertoire: Repertoire, fen: string): Promise<void> {
-  const children = await db.positions
-    .filter(p => p.repertoire === repertoire && Object.values(p.moves).some(m => m.toFen === fen))
-    .toArray();
-  for (const parent of children) {
-    const toRemove = Object.entries(parent.moves)
-      .filter(([, m]) => m.toFen === fen)
-      .map(([san]) => san);
-    for (const san of toRemove) {
-      delete parent.moves[san];
+  const prefix = repertoire + '|';
+  for (const [key, pos] of Object.entries(positionCache)) {
+    if (!key.startsWith(prefix)) continue;
+    for (const [san, edge] of Object.entries(pos.moves)) {
+      if (edge.toFen === fen) {
+        delete pos.moves[san];
+        if (pos.moveOrder) {
+          pos.moveOrder = pos.moveOrder.filter(s => s !== san);
+        }
+        pos.updatedAt = Date.now();
+        await db.positions.put(toPlain(pos));
+      }
     }
-    parent.updatedAt = Date.now();
-    await db.positions.put(toPlain(parent));
   }
   delete positionCache[cacheKey(repertoire, fen)];
   await db.positions.delete([repertoire, fen]);
@@ -301,7 +308,7 @@ export async function importPositionsJson(json: string): Promise<void> {
   });
 }
 
-export function getOrCreatePosition(repertoire: Repertoire, fen: string): Position {
+export async function getOrCreatePosition(repertoire: Repertoire, fen: string): Promise<Position> {
   const key = cacheKey(repertoire, fen);
   if (positionCache[key]) return positionCache[key];
   const now = Date.now();
@@ -315,6 +322,6 @@ export function getOrCreatePosition(repertoire: Repertoire, fen: string): Positi
     updatedAt: now,
   };
   positionCache[key] = pos;
-  db.positions.put(toPlain(pos));
+  await db.positions.put(toPlain(pos));
   return pos;
 }

@@ -50,9 +50,7 @@ export function exportMainlinePgn(repertoire: Repertoire, fromFen?: string): str
 
     try {
       chess.move(san);
-      const afterChess = new Chess(toChessJsFen(fen));
-      afterChess.move(san);
-      fen = normalizeFen(afterChess.fen());
+      fen = normalizeFen(chess.fen());
     } catch {
       break;
     }

@@ -1,8 +1,8 @@
 import type { ComfortLevel } from '../types';
-import { COMFORT_RANK } from '../constants';
+import { COMFORT_VALUE } from '../constants';
 
 export function comfortRank(c: string | null | undefined): number {
-  return c ? (COMFORT_RANK[c] ?? 2) : 2;
+  return c ? (COMFORT_VALUE[c] ?? 2) : 2;
 }
 
 export function sortMoves<T extends { san: string; comfort: ComfortLevel | null }>(

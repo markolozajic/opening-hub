@@ -1,7 +1,7 @@
 import type { ComfortLevel, Repertoire } from '../types';
 import { getPosition } from '../db/positionStore.svelte';
 import { getTurn } from '../utils/fen';
-import { COMFORT_PRIORITY } from '../constants';
+import { COMFORT_SEVERITY } from '../constants';
 
 const comfortCache: Record<string, ComfortLevel | null> = {};
 
@@ -31,7 +31,7 @@ function collectLeafComforts(repertoire: Repertoire, fen: string, ourSide: strin
   const children = visibleChildren(pos, fen, ourSide);
 
   if (children.length === 0) {
-    return pos.comfortLevel != null ? [COMFORT_PRIORITY[pos.comfortLevel]] : [];
+    return pos.comfortLevel != null ? [COMFORT_SEVERITY[pos.comfortLevel]] : [];
   }
 
   const results: number[] = [];
