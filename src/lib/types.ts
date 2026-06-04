@@ -3,6 +3,7 @@ export type Repertoire = 'white' | 'black';
 export type ComfortLevel = 'easy' | 'comfortable' | 'moderate' | 'uncomfortable' | 'struggling';
 export type MoveMarker = '?' | '!' | '!?' | '?!' | '??' | '!!' | 'N';
 export type MoveLabel = 'main' | 'alternative' | 'avoid';
+export type SortMode = 'comfort' | 'manual';
 
 export interface MoveEdge {
   toFen: string;
@@ -33,6 +34,7 @@ export interface Position {
   moveOrder?: string[];
   dismissedTranspositions?: string[];
   comment?: string;
+  sortMode?: SortMode;
   comfortLevel?: ComfortLevel;
   moves: Record<string, MoveEdge>;
   links: Link[];

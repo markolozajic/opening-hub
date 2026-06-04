@@ -8,6 +8,7 @@ import { toPlain } from '../utils/helpers';
 const MIGRATION_KEY = 'opening-hub-label-migrated';
 const COMFORT_MIGRATION_KEY = 'opening-hub-comfort-migrated';
 const ROOT_COMMENT_MIGRATION_KEY = 'opening-hub-root-comment-migrated';
+const SORT_MODE_MIGRATION_KEY = 'opening-hub-sort-mode-migrated';
 
 export async function migrateMoveLabels(): Promise<void> {
   if (localStorage.getItem(MIGRATION_KEY)) return;
@@ -63,4 +64,20 @@ export async function migrateRootComment(): Promise<void> {
     }
   }
   localStorage.setItem(ROOT_COMMENT_MIGRATION_KEY, '1');
+}
+
+export async function migrateSortMode(): Promise<void> {
+  if (localStorage.getItem(SORT_MODE_MIGRATION_KEY)) return;
+  const allRepertoires: Repertoire[] = ['white', 'black'];
+  for (const rep of allRepertoires) {
+    const positions = await db.positions.where('repertoire').equals(rep).toArray();
+    for (const pos of positions) {
+      if (pos.moveOrder && pos.moveOrder.length > 0 && !pos.sortMode) {
+        pos.sortMode = 'manual';
+        positionCache[cacheKey(pos.repertoire, pos.fen)] = pos;
+        await db.positions.put(toPlain(pos));
+      }
+    }
+  }
+  localStorage.setItem(SORT_MODE_MIGRATION_KEY, '1');
 }

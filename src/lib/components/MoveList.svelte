@@ -1,14 +1,14 @@
 <script lang="ts">
   import { nav } from '../state/navigation.svelte';
   import { labelData } from '../state/labels.svelte';
-  import { getPosition, setMoveMarker, setMoveLabel, setComfortLevel } from '../db/positionStore.svelte';
+  import { getPosition, setMoveMarker, setMoveLabel, setComfortLevel, setSortMode, setMoveOrder } from '../db/positionStore.svelte';
   import { findMoveNumber, findAllTranspositionPaths } from '../utils/positionQueries';
-  import type { MovePathStep, MoveMarker, ComfortLevel, MoveLabel } from '../types';
+  import type { MovePathStep, MoveMarker, ComfortLevel, MoveLabel, SortMode } from '../types';
   import { COMFORT_COLORS, COMFORT_LABELS, MOVE_LABELS } from '../constants';
   import { getComfort } from '../state/comfort.svelte';
   import { getNovelty } from '../state/novelty.svelte';
   import { getTurn } from '../utils/fen';
-  import { sortMoves, formatNumberedSan } from '../utils/positionUtils';
+  import { sortMoves, sortedMoveSans, formatNumberedSan } from '../utils/positionUtils';
   import MiniBoard from './MiniBoard.svelte';
   import ComfortBadge from './ComfortBadge.svelte';
   import { navigateTo, navigatePath } from '../state/navigation.svelte';
@@ -38,7 +38,8 @@
       : []
   );
 
-  let sortedMoves = $derived(sortMoves(position?.moveOrder, moves));
+  let sortMode = $derived(position?.sortMode ?? 'comfort');
+  let sortedMoves = $derived(sortMoves(position?.moveOrder, moves, sortMode));
 
   let depth = $derived(findMoveNumber(nav.activeRepertoire, nav.currentFen));
   let numberedMoves = $derived(sortedMoves.map(m => ({
@@ -193,10 +194,28 @@
     editShowLabel = false;
     metaDialogRef?.close();
   }
+
+  async function handleToggleSortMode() {
+    const rep = nav.activeRepertoire;
+    const fen = nav.currentFen;
+    const pos = getPosition(rep, fen);
+    if (!pos) return;
+    const newMode: SortMode = sortMode === 'comfort' ? 'manual' : 'comfort';
+    if (newMode === 'manual' && (!pos.moveOrder || pos.moveOrder.length === 0)) {
+      const currentSans = sortedMoveSans('comfort', undefined, moves);
+      await setMoveOrder(rep, fen, currentSans);
+    }
+    await setSortMode(rep, fen, newMode);
+  }
 </script>
 
 <div class="move-list">
-  <h3 class="title">Moves</h3>
+  <div class="title-row">
+    <h3 class="title">Moves</h3>
+    <button class="sort-toggle" onclick={handleToggleSortMode} title={sortMode === 'comfort' ? 'Switch to manual order' : 'Switch to comfort order'}>
+      {sortMode === 'comfort' ? 'Active: Comfort order' : 'Active: Manual order'}
+    </button>
+  </div>
   {#if sortedMoves.length === 0}
     <p class="empty">No moves added yet. Click a piece on the board.</p>
   {:else}
@@ -210,7 +229,7 @@
           class:label-avoid={move.label === 'avoid'}
           class:dragging={dragIndex === i}
           class:drag-over={dragIndex !== null && dragIndex !== i && dragOverIndex === i}
-          draggable={sortedMoves.length > 1}
+          draggable={sortMode === 'manual' && sortedMoves.length > 1}
           role="listitem"
           ondragstart={(e) => handleDragStart(e, i)}
           ondragover={(e) => handleDragOver(e, i)}
@@ -218,9 +237,11 @@
           ondrop={(e) => handleDrop(e, i)}
           ondragend={resetDrag}
         >
-          <button class="drag-handle" tabindex="-1" aria-label="Drag to reorder">
-            <GripVertical size={12} />
-          </button>
+          {#if sortMode === 'manual'}
+            <button class="drag-handle" tabindex="-1" aria-label="Drag to reorder">
+              <GripVertical size={12} />
+            </button>
+          {/if}
           <button class="move-card" onclick={() => handleNavigate(move.toFen, move.san, move.autoDetected)}>
             <div class="move-header">
               <span class="move-san">{move.displaySan}</span>
@@ -398,7 +419,14 @@
     display: flex; flex-direction: column; gap: 0.5rem;
     padding: 0.75rem; overflow-y: auto; min-width: 120px;
   }
+  .title-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
   .title { margin: 0; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .sort-toggle {
+    font-size: 0.625rem; padding: 0.125rem 0.375rem; border: 1px solid var(--border);
+    border-radius: 4px; background: var(--surface1); color: var(--muted); cursor: pointer;
+    font-family: inherit; white-space: nowrap;
+  }
+  .sort-toggle:hover { border-color: var(--accent); color: var(--accent); }
   .empty { color: var(--muted); font-style: italic; font-size: 0.8125rem; margin: 0; }
   .moves { display: flex; flex-direction: column; gap: 0.5rem; }
   .move-card-wrapper {
