@@ -1,0 +1,47 @@
+export type Repertoire = 'white' | 'black';
+
+export type ComfortLevel = 'easy' | 'moderate' | 'uncomfortable';
+export type MoveLabel = 'main' | 'alternative' | 'avoid';
+
+export interface MoveEdge {
+  toFen: string;
+  comment?: string;
+  autoDetected?: boolean;
+  label?: MoveLabel;
+}
+
+export interface Link {
+  id: string;
+  url: string;
+  label: string;
+  type: 'youtube' | 'chessable' | 'lichess' | 'other';
+}
+
+export interface PgnAttachment {
+  id: string;
+  pgn: string;
+  label: string;
+}
+
+export interface Position {
+  repertoire: Repertoire;
+  fen: string;
+  name?: string;
+  autoNamed?: boolean;
+  moveOrder?: string[];
+  dismissedTranspositions?: string[];
+  comment?: string;
+  comfortLevel?: ComfortLevel;
+  moves: Record<string, MoveEdge>;
+  links: Link[];
+  pgnAttachments: PgnAttachment[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface VerboseMove {
+  from: string;
+  to: string;
+  san: string;
+  color: 'w' | 'b';
+}

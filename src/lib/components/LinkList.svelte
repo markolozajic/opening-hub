@@ -1,0 +1,190 @@
+<script lang="ts">
+  import type { Link } from '../types';
+  import { Film, BookOpen, ExternalLink, Globe, Trash2, Plus, Pencil } from '@lucide/svelte';
+
+  let {
+    links = [] as Link[],
+    readonly = false,
+    onAdd = (_link: Link) => {},
+    onRemove = (_id: string) => {},
+    onEdit = (_id: string, _updates: Partial<Link>) => {},
+  } = $props();
+
+  let showForm = $state(false);
+  let url = $state('');
+  let label = $state('');
+  let type = $state<'youtube' | 'chessable' | 'lichess' | 'other'>('other');
+  let fetchingTitle = $state(false);
+
+  let editingId = $state<string | null>(null);
+  let editUrl = $state('');
+  let editLabel = $state('');
+  let editType = $state<'youtube' | 'chessable' | 'lichess' | 'other'>('other');
+  let editFetchingTitle = $state(false);
+
+  const YOUTUBE_RE = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
+
+  async function fetchYouTubeTitle(videoUrl: string): Promise<string | null> {
+    try {
+      const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(videoUrl)}&format=json`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.title ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function handleTypeChange(newType: string, currentUrl: string, currentLabel: string, setIsFetching: (v: boolean) => void, setLabel: (v: string) => void) {
+    if (newType === 'youtube' && YOUTUBE_RE.test(currentUrl) && !currentLabel.trim()) {
+      setIsFetching(true);
+      const title = await fetchYouTubeTitle(currentUrl);
+      if (title) setLabel(title);
+      setIsFetching(false);
+    }
+  }
+
+  function handleAdd() {
+    if (!url.trim()) return;
+    onAdd({ id: crypto.randomUUID(), url: url.trim(), label: label.trim() || url.trim(), type });
+    url = '';
+    label = '';
+    type = 'other';
+    showForm = false;
+  }
+
+  function startEdit(link: Link) {
+    editingId = link.id;
+    editUrl = link.url;
+    editLabel = link.label;
+    editType = link.type;
+  }
+
+  function cancelEdit() {
+    editingId = null;
+    editUrl = '';
+    editLabel = '';
+    editType = 'other';
+  }
+
+  function handleSaveEdit(link: Link) {
+    if (!editUrl.trim()) return;
+    onEdit(link.id, { url: editUrl.trim(), label: editLabel.trim() || editUrl.trim(), type: editType });
+    cancelEdit();
+  }
+</script>
+
+<div class="link-list">
+  {#if links.length > 0}
+    <div class="items">
+      {#each links as link}
+        {#if editingId === link.id}
+          <div class="edit-form">
+            <input bind:value={editUrl} placeholder="URL" class="input" type="url" />
+            <input bind:value={editLabel} placeholder="Label (optional)" class="input" />
+            <select bind:value={editType} class="input" onchange={() => handleTypeChange(editType, editUrl, editLabel, v => editFetchingTitle = v, v => editLabel = v)}>
+              <option value="other">Other</option>
+              <option value="youtube">YouTube</option>
+              <option value="chessable">Chessable</option>
+              <option value="lichess">Lichess</option>
+            </select>
+            {#if editFetchingTitle}
+              <span class="fetching">Fetching title…</span>
+            {/if}
+            <div class="form-actions">
+              <button class="btn primary" onclick={() => handleSaveEdit(link)}>Save</button>
+              <button class="btn" onclick={cancelEdit}>Cancel</button>
+            </div>
+          </div>
+        {:else}
+          <div class="link-item">
+            {#if link.type === 'youtube'}
+              <Film size={14} class="link-icon" />
+            {:else if link.type === 'chessable'}
+              <BookOpen size={14} class="link-icon" />
+            {:else if link.type === 'lichess'}
+              <ExternalLink size={14} class="link-icon" />
+            {:else}
+              <Globe size={14} class="link-icon" />
+            {/if}
+            <a href={link.url} target="_blank" rel="noopener noreferrer" class="link-url">
+              {link.label}
+            </a>
+            {#if !readonly}
+              <button class="btn-icon" onclick={() => startEdit(link)} title="Edit link">
+                <Pencil size={12} />
+              </button>
+              <button class="btn-icon" onclick={() => onRemove(link.id)} title="Remove link">
+                <Trash2 size={12} />
+              </button>
+            {/if}
+          </div>
+        {/if}
+      {/each}
+    </div>
+  {:else if readonly}
+    <p class="empty">No links</p>
+  {/if}
+
+  {#if !readonly}
+    {#if showForm}
+      <div class="add-form">
+        <input bind:value={url} placeholder="URL" class="input" type="url" />
+        <input bind:value={label} placeholder="Label (optional)" class="input" />
+        <select bind:value={type} class="input" onchange={() => handleTypeChange(type, url, label, v => fetchingTitle = v, v => label = v)}>
+          <option value="other">Other</option>
+          <option value="youtube">YouTube</option>
+          <option value="chessable">Chessable</option>
+          <option value="lichess">Lichess</option>
+        </select>
+        {#if fetchingTitle}
+          <span class="fetching">Fetching title…</span>
+        {/if}
+        <div class="form-actions">
+          <button class="btn primary" onclick={handleAdd}>Add</button>
+          <button class="btn" onclick={() => showForm = false}>Cancel</button>
+        </div>
+      </div>
+    {:else}
+      <button class="btn add-btn" onclick={() => showForm = true}>
+        <Plus size={12} /> Link
+      </button>
+    {/if}
+  {/if}
+</div>
+
+<style>
+  .link-list { font-size: 0.8125rem; }
+  .items { display: flex; flex-direction: column; gap: 0.25rem; }
+  .link-item {
+    display: flex; align-items: center; gap: 0.375rem;
+    padding: 0.25rem 0.375rem; border-radius: 4px;
+  }
+  .link-item:hover { background: var(--surface2); }
+  :global(.link-icon) { flex-shrink: 0; color: var(--accent); }
+  .link-url { color: var(--accent); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .link-url:hover { text-decoration: underline; }
+  .empty { color: var(--muted); font-style: italic; }
+  .btn-icon {
+    background: none; border: none; cursor: pointer; padding: 2px;
+    color: var(--muted); border-radius: 3px; flex-shrink: 0;
+  }
+  .btn-icon:hover { color: var(--text-h); background: var(--surface2); }
+  .btn-icon:hover:last-child { color: var(--danger); }
+  .add-form, .edit-form { display: flex; flex-direction: column; gap: 0.375rem; margin-top: 0.375rem; }
+  .form-actions { display: flex; gap: 0.375rem; }
+  .add-btn { margin-top: 0.375rem; }
+  .input {
+    padding: 0.375rem 0.5rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--bg); color: var(--text-h); font-size: inherit; font-family: inherit;
+  }
+  .btn {
+    padding: 0.375rem 0.75rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--surface1); color: var(--text-h); cursor: pointer; font-size: inherit;
+    display: inline-flex; align-items: center; gap: 0.25rem;
+  }
+  .btn:hover { background: var(--surface2); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { opacity: 0.9; }
+  .fetching { font-size: 0.75rem; color: var(--muted); font-style: italic; }
+</style>
