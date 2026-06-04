@@ -6,6 +6,7 @@
   import type { MovePathStep, MoveMarker, ComfortLevel, MoveLabel } from '../types';
   import { COMFORT_COLORS, COMFORT_LABELS, MOVE_LABELS } from '../constants';
   import { getComfort } from '../state/comfort.svelte';
+  import { getNovelty } from '../state/novelty.svelte';
   import { getTurn } from '../utils/fen';
   import { sortMoves, formatNumberedSan } from '../utils/positionUtils';
   import MiniBoard from './MiniBoard.svelte';
@@ -142,6 +143,7 @@
 
   let ourTurn = $derived(getTurn(nav.currentFen) === (nav.activeRepertoire === 'white' ? 'w' : 'b'));
   let moveCount = $derived(position ? Object.keys(position.moves).length : 0);
+  let isCurrentPositionNovel = $derived(getNovelty(nav.activeRepertoire, nav.currentFen));
 
   $effect(() => {
     if (metaDialogRef && editMoveSan !== null) {
@@ -222,7 +224,7 @@
           <button class="move-card" onclick={() => handleNavigate(move.toFen, move.san, move.autoDetected)}>
             <div class="move-header">
               <span class="move-san">{move.displaySan}</span>
-              {#if move.marker}<span class="move-marker">{move.marker}</span>{/if}
+              {#if move.marker}<span class="move-marker" class:move-marker-novelty={move.marker === 'N'}>{move.marker}</span>{/if}
               <ComfortBadge level={move.comfort} size={8} />
             </div>
             <MiniBoard fen={move.toFen} flipped={isFlipped} size={100} />
@@ -351,6 +353,15 @@
               {marker}
             </button>
           {/each}
+          <button
+            class="meta-btn novelty-btn"
+            class:selected={editCurrentMarker === 'N'}
+            class:disabled-novelty={isCurrentPositionNovel}
+            disabled={isCurrentPositionNovel}
+            onclick={() => editCurrentMarker = editCurrentMarker === 'N' ? undefined : 'N' as MoveMarker}
+          >
+            N
+          </button>
         </div>
       </div>
 
@@ -451,6 +462,7 @@
   .move-header { display: flex; align-items: center; gap: 0.375rem; }
   .move-san { font-weight: 600; font-size: 0.9375rem; color: var(--text-h); }
   .move-marker { font-weight: 600; font-size: 0.9375rem; color: var(--accent); }
+  .move-marker-novelty { color: #14b8a6; }
   .move-comment { font-size: 0.6875rem; color: var(--text); line-height: 1.3; }
   .child-name { font-size: 0.6875rem; color: var(--accent); font-style: italic; }
 
@@ -520,6 +532,10 @@
   .label-options, .comfort-options {
     display: flex; flex-wrap: wrap; gap: 0.375rem; justify-content: center;
   }
+  .novelty-btn { border-color: var(--border); }
+  .novelty-btn.selected { border-color: #14b8a6; background: color-mix(in srgb, #14b8a6 15%, transparent); color: #14b8a6; }
+  .novelty-btn.disabled-novelty { opacity: 0.35; cursor: not-allowed; }
+  .novelty-btn.disabled-novelty:hover { border-color: var(--border); background: var(--surface1); }
   .meta-btn {
     padding: 0.375rem 0.75rem; border: 2px solid var(--border); border-radius: 6px;
     background: var(--surface1); color: var(--text-h); cursor: pointer;

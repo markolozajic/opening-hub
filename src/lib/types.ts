@@ -1,7 +1,7 @@
 export type Repertoire = 'white' | 'black';
 
 export type ComfortLevel = 'easy' | 'comfortable' | 'moderate' | 'uncomfortable' | 'struggling';
-export type MoveMarker = '?' | '!' | '!?' | '?!' | '??' | '!!';
+export type MoveMarker = '?' | '!' | '!?' | '?!' | '??' | '!!' | 'N';
 export type MoveLabel = 'main' | 'alternative' | 'avoid';
 
 export interface MoveEdge {

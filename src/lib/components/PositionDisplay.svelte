@@ -3,6 +3,7 @@
   import { nav } from '../state/navigation.svelte';
   import { getSideLabel } from '../utils/fen';
   import { getComfort } from '../state/comfort.svelte';
+  import { getNovelty } from '../state/novelty.svelte';
   import ComfortBadge from './ComfortBadge.svelte';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import LinkList from './LinkList.svelte';
@@ -17,6 +18,7 @@
   let fen = $derived(position?.fen ?? '');
   let comfort = $derived(fen ? getComfort(nav.activeRepertoire, fen) : null);
   let turn = $derived(position ? getSideLabel(position.fen.split(' ')[1] as 'w' | 'b' || 'w') : '');
+  let isNovel = $derived(fen ? getNovelty(nav.activeRepertoire, fen) : false);
 </script>
 
 {#if position}
@@ -33,6 +35,9 @@
       <div class="meta">
         <ComfortBadge level={comfort} size={10} />
         <span class="comfort-label">{comfort ?? 'Unrated'}</span>
+        {#if isNovel}
+          <span class="novelty-badge">N</span>
+        {/if}
         <span class="sep">·</span>
         <span class="turn">{turn}</span>
       </div>
@@ -78,6 +83,12 @@
   .comfort-label { text-transform: capitalize; }
   .sep { color: var(--border); }
   .turn { font-style: italic; }
+  .novelty-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.625rem; font-weight: 700; line-height: 1;
+    color: #14b8a6; border: 1px solid #14b8a6; border-radius: 3px;
+    padding: 1px 4px; letter-spacing: 0.02em;
+  }
   .section { display: flex; flex-direction: column; gap: 0.375rem; }
   .section-title {
     margin: 0; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
