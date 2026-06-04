@@ -1,11 +1,10 @@
 import type { Repertoire } from '../types';
-import { getRootFen, getPosition } from '../db/positionStore.svelte';
+import { getRootFen, getPosition, positionCache } from '../db/positionStore.svelte';
+import { cacheKey } from '../utils/fen';
 
 export const nav = $state({
   activeRepertoire: 'white' as Repertoire,
   currentFen: getRootFen(),
-  backStack: [] as string[],
-  forwardStack: [] as string[],
   showMoveChooser: false,
 });
 
@@ -13,38 +12,32 @@ export function switchRepertoire(r: Repertoire): void {
   if (r === nav.activeRepertoire) return;
   nav.activeRepertoire = r;
   nav.currentFen = getRootFen();
-  nav.backStack = [];
-  nav.forwardStack = [];
   nav.showMoveChooser = false;
 }
 
 export function navigateTo(fen: string): void {
   if (fen === nav.currentFen) return;
-  nav.backStack.push(nav.currentFen);
-  nav.forwardStack = [];
   nav.currentFen = fen;
 }
 
 export function goBack(): string | undefined {
-  if (nav.backStack.length === 0) return undefined;
-  nav.forwardStack.push(nav.currentFen);
-  nav.currentFen = nav.backStack.pop()!;
-  return nav.currentFen;
+  const rootFen = getRootFen();
+  if (nav.currentFen === rootFen) return undefined;
+  const parent = findParent(nav.activeRepertoire, nav.currentFen);
+  if (parent) {
+    nav.currentFen = parent;
+    return parent;
+  }
+  return undefined;
 }
 
 export function canGoBack(): boolean {
-  return nav.backStack.length > 0;
-}
-
-export function canGoForward(): boolean {
-  return nav.forwardStack.length > 0;
+  return nav.currentFen !== getRootFen();
 }
 
 export function navigateToRoot(): void {
   const rootFen = getRootFen();
   if (nav.currentFen !== rootFen) {
-    nav.backStack.push(nav.currentFen);
-    nav.forwardStack = [];
     nav.currentFen = rootFen;
   }
 }
@@ -56,16 +49,9 @@ export function getChildMoves(): { san: string; toFen: string }[] {
 }
 
 export function goForward(): void {
-  if (nav.forwardStack.length > 0) {
-    nav.backStack.push(nav.currentFen);
-    nav.currentFen = nav.forwardStack.pop()!;
-    return;
-  }
   const children = getChildMoves();
   if (children.length === 0) return;
   if (children.length === 1) {
-    nav.backStack.push(nav.currentFen);
-    nav.forwardStack = [];
     nav.currentFen = children[0].toFen;
   } else {
     nav.showMoveChooser = true;
@@ -79,6 +65,17 @@ export function chooseMove(toFen: string): void {
 
 export function cancelMoveChooser(): void {
   nav.showMoveChooser = false;
+}
+
+function findParent(repertoire: Repertoire, fen: string): string | null {
+  const prefix = repertoire + '|';
+  for (const [key, pos] of Object.entries(positionCache)) {
+    if (!key.startsWith(prefix)) continue;
+    for (const edge of Object.values(pos.moves)) {
+      if (edge.toFen === fen) return pos.fen;
+    }
+  }
+  return null;
 }
 
 export function handleKeyDown(e: KeyboardEvent): void {
