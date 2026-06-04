@@ -2,6 +2,7 @@ import { Chess } from 'chess.js';
 import { db } from './schema';
 import type { Position, Repertoire, ComfortLevel, Link, PgnAttachment, MoveLabel, MoveMarker } from '../types';
 import { cacheKey, toChessJsFen, getTurn, normalizeFen } from '../utils/fen';
+import { invalidateNoveltyCache } from '../state/novelty.svelte';
 import { STARTING_FEN, STARTING_POSITION_COMMENT } from '../constants';
 import { migrateMoveLabels, migrateComfortCoherence, migrateRootComment } from './migrations';
 import { findMoveNumber } from '../utils/positionQueries';
@@ -113,6 +114,7 @@ export async function confirmMove(repertoire: Repertoire, fen: string, san: stri
   delete pos.moves[san].autoDetected;
   pos.updatedAt = Date.now();
   await db.positions.put(toPlain(pos));
+  invalidateNoveltyCache(repertoire);
 }
 
 export async function dismissMove(repertoire: Repertoire, fen: string, san: string): Promise<void> {
@@ -128,6 +130,7 @@ export async function dismissMove(repertoire: Repertoire, fen: string, san: stri
   delete pos.moves[san];
   pos.updatedAt = Date.now();
   await db.positions.put(toPlain(pos));
+  invalidateNoveltyCache(repertoire);
 }
 
 export async function setComfortLevel(repertoire: Repertoire, fen: string, level: ComfortLevel | undefined): Promise<void> {
@@ -189,6 +192,7 @@ export async function addMove(repertoire: Repertoire, fromFen: string, san: stri
 
   from.updatedAt = Date.now();
   await db.positions.put(toPlain(from));
+  invalidateNoveltyCache(repertoire);
 }
 
 export async function setMoveOrder(repertoire: Repertoire, fen: string, order: string[]): Promise<void> {
@@ -229,6 +233,7 @@ export async function setMoveMarker(repertoire: Repertoire, fen: string, san: st
   }
   pos.updatedAt = Date.now();
   await db.positions.put(toPlain(pos));
+  invalidateNoveltyCache(repertoire);
 }
 
 export async function addLink(repertoire: Repertoire, fen: string, link: Link): Promise<void> {

@@ -2,6 +2,7 @@ import type { Repertoire } from '../types';
 import { getPosition } from '../db/positionStore.svelte';
 import { STARTING_FEN } from '../constants';
 
+let invalidationToken = $state(0);
 const noveltyCache: Record<string, boolean> = {};
 
 function computeNoveltyFor(repertoire: Repertoire, fen: string): boolean {
@@ -45,8 +46,10 @@ function computeNoveltyFor(repertoire: Repertoire, fen: string): boolean {
 }
 
 export function getNovelty(repertoire: Repertoire, fen: string): boolean {
+  invalidationToken;
   const key = `${repertoire}|${fen}`;
-  if (key in noveltyCache) return noveltyCache[key];
+  const cached = noveltyCache[key];
+  if (cached !== undefined) return cached;
   const result = computeNoveltyFor(repertoire, fen);
   noveltyCache[key] = result;
   return result;
@@ -64,4 +67,5 @@ export function invalidateNoveltyCache(repertoire?: string, fen?: string): void 
       delete noveltyCache[key];
     }
   }
+  invalidationToken++;
 }

@@ -2,6 +2,7 @@
   import type { Position, ComfortLevel, Link, PgnAttachment, Repertoire } from '../types';
   import { nav } from '../state/navigation.svelte';
   import { setPositionName, setPositionComment, setComfortLevel, addLink, removeLink, addPgnAttachment, removePgnAttachment, getPosition, updateLink } from '../db/positionStore.svelte';
+  import { getNovelty } from '../state/novelty.svelte';
   import { invalidateComfortCache } from '../state/comfort.svelte';
   import { COMFORT_COLORS, COMFORT_LABELS } from '../constants';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
@@ -23,6 +24,8 @@
   let previewMode = $state(false);
   let saving = $state(false);
 
+  let isNovel = $derived(position ? getNovelty(nav.activeRepertoire, position.fen) : false);
+
   let textareaRef = $state<HTMLTextAreaElement | null>(null);
   let lastProcessedKey = '';
   const LINK_RE = /\[([^\]]*)\]\(opening:\/\/navigate\/([^)]+)\)/g;
@@ -43,16 +46,10 @@
     if (!textareaRef || !position) return position?.fen ?? '';
     const cursor = textareaRef.selectionStart;
     const links = parseCommentLinks(comment);
-    if (links.length === 0) return position.fen;
-    for (let i = 0; i < links.length; i++) {
-      const link = links[i];
-      if (cursor < link.start) {
-        if (i === 0) return position.fen;
-        return position.fen;
-      }
+    for (const link of links) {
       if (cursor >= link.start && cursor <= link.end) return link.fen;
     }
-    return links[links.length - 1].fen;
+    return position.fen;
   }
 
   function handleTextareaCursorChange() {
@@ -147,7 +144,12 @@
 {#if position}
   <div class="editor">
     <div class="editor-header">
-      <h3 class="editor-title">Edit Position</h3>
+      <div class="editor-title-row">
+        <h3 class="editor-title">Edit Position</h3>
+        {#if isNovel}
+          <span class="novelty-badge">N</span>
+        {/if}
+      </div>
       <div class="editor-actions">
         <button class="btn primary" onclick={handleSave} disabled={saving}>
           <Check size={14} /> {saving ? 'Saving...' : 'Save'}
@@ -246,8 +248,15 @@
   .editor-header {
     display: flex; align-items: center; justify-content: space-between;
   }
+  .editor-title-row { display: flex; align-items: center; gap: 0.5rem; }
   .editor-title { margin: 0; font-size: 1rem; font-weight: 600; color: var(--text-h); }
   .editor-actions { display: flex; gap: 0.375rem; }
+  .novelty-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.625rem; font-weight: 700; line-height: 1;
+    color: #14b8a6; border: 1px solid #14b8a6; border-radius: 3px;
+    padding: 1px 4px; letter-spacing: 0.02em;
+  }
   .field { display: flex; flex-direction: column; gap: 0.375rem; }
   .label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
   .label-row { display: flex; align-items: center; justify-content: space-between; }

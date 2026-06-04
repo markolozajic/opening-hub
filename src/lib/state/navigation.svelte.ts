@@ -11,7 +11,7 @@ export const nav = $state({
   forwardStack: [] as MovePathStep[],
   currentPath: [] as MovePathStep[],
   showMoveChooser: false,
-  sortMode: 'comfort' as SortMode,
+  sortMode: 'manual' as SortMode,
 });
 
 const parentIndex = $derived.by(() => {
