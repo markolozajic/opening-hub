@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Link } from '../types';
   import { Film, BookOpen, ExternalLink, Globe, Trash2, Plus, Pencil } from '@lucide/svelte';
+  import { parseYouTubeUrl } from '../utils/youtube';
 
   let {
     links = [] as Link[],
@@ -97,28 +98,44 @@
             </div>
           </div>
         {:else}
-          <div class="link-item">
-            {#if link.type === 'youtube'}
-              <Film size={14} class="link-icon" />
-            {:else if link.type === 'chessable'}
-              <BookOpen size={14} class="link-icon" />
-            {:else if link.type === 'lichess'}
-              <ExternalLink size={14} class="link-icon" />
-            {:else}
-              <Globe size={14} class="link-icon" />
-            {/if}
-            <a href={link.url} target="_blank" rel="noopener noreferrer" class="link-url">
-              {link.label}
-            </a>
-            {#if !readonly}
-              <button class="btn-icon" onclick={() => startEdit(link)} title="Edit link">
-                <Pencil size={12} />
-              </button>
-              <button class="btn-icon" onclick={() => onRemove(link.id)} title="Remove link">
-                <Trash2 size={12} />
-              </button>
-            {/if}
-          </div>
+          {#if !(readonly && link.type === 'youtube')}
+            <div class="link-item">
+              {#if link.type === 'youtube'}
+                <Film size={14} class="link-icon" />
+              {:else if link.type === 'chessable'}
+                <BookOpen size={14} class="link-icon" />
+              {:else if link.type === 'lichess'}
+                <ExternalLink size={14} class="link-icon" />
+              {:else}
+                <Globe size={14} class="link-icon" />
+              {/if}
+              <a href={link.url} target="_blank" rel="noopener noreferrer" class="link-url">
+                {link.label}
+              </a>
+              {#if !readonly}
+                <button class="btn-icon" onclick={() => startEdit(link)} title="Edit link">
+                  <Pencil size={12} />
+                </button>
+                <button class="btn-icon" onclick={() => onRemove(link.id)} title="Remove link">
+                  <Trash2 size={12} />
+                </button>
+              {/if}
+            </div>
+          {/if}
+        {/if}
+        {#if readonly && link.type === 'youtube'}
+          {@const parsed = parseYouTubeUrl(link.url)}
+          {#if parsed}
+            <div class="youtube-embed">
+              <iframe
+                src="https://www.youtube.com/embed/{parsed.videoId}{parsed.startTime ? `?start=${parsed.startTime}` : ''}"
+                title={link.label}
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            </div>
+          {/if}
         {/if}
       {/each}
     </div>
@@ -162,6 +179,15 @@
   }
   .link-item:hover { background: var(--surface2); }
   :global(.link-icon) { flex-shrink: 0; color: var(--accent); }
+  .youtube-embed {
+    position: relative; width: 100%; max-width: 100%;
+    aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden;
+    margin-top: 0.25rem;
+  }
+  .youtube-embed iframe {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; border: none;
+  }
   .link-url { color: var(--accent); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
   .link-url:hover { text-decoration: underline; }
   .empty { color: var(--muted); font-style: italic; }
