@@ -2,8 +2,8 @@ import { Chess } from 'chess.js';
 import { db } from './schema';
 import type { Position, Repertoire, ComfortLevel, Link, PgnAttachment, MoveLabel, MoveMarker } from '../types';
 import { cacheKey, toChessJsFen, getTurn, normalizeFen } from '../utils/fen';
-import { STARTING_FEN } from '../constants';
-import { migrateMoveLabels, migrateComfortCoherence } from './migrations';
+import { STARTING_FEN, STARTING_POSITION_COMMENT } from '../constants';
+import { migrateMoveLabels, migrateComfortCoherence, migrateRootComment } from './migrations';
 import { findMoveNumber } from '../utils/positionQueries';
 import { formatNumberedSan } from '../utils/positionUtils';
 import { toPlain } from '../utils/helpers';
@@ -43,6 +43,7 @@ async function ensureRoot(repertoire: Repertoire): Promise<void> {
   const root: Position = {
     repertoire,
     fen: rootFen,
+    comment: STARTING_POSITION_COMMENT,
     moves: {},
     links: [],
     pgnAttachments: [],
@@ -62,6 +63,7 @@ export async function initPositionStore(): Promise<void> {
   ensureRoot('black');
   await migrateMoveLabels();
   await migrateComfortCoherence();
+  await migrateRootComment();
 }
 
 export function getRootFen(): string {

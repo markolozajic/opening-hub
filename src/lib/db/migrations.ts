@@ -1,11 +1,13 @@
 import type { Position, Repertoire } from '../types';
 import { cacheKey, getTurn } from '../utils/fen';
+import { STARTING_FEN, STARTING_POSITION_COMMENT } from '../constants';
 import { db } from './schema';
 import { positionCache } from './positionStore.svelte';
 import { toPlain } from '../utils/helpers';
 
 const MIGRATION_KEY = 'opening-hub-label-migrated';
 const COMFORT_MIGRATION_KEY = 'opening-hub-comfort-migrated';
+const ROOT_COMMENT_MIGRATION_KEY = 'opening-hub-root-comment-migrated';
 
 export async function migrateMoveLabels(): Promise<void> {
   if (localStorage.getItem(MIGRATION_KEY)) return;
@@ -46,4 +48,19 @@ export async function migrateComfortCoherence(): Promise<void> {
     }
   }
   localStorage.setItem(COMFORT_MIGRATION_KEY, '1');
+}
+
+export async function migrateRootComment(): Promise<void> {
+  if (localStorage.getItem(ROOT_COMMENT_MIGRATION_KEY)) return;
+  const allRepertoires: Repertoire[] = ['white', 'black'];
+  for (const rep of allRepertoires) {
+    const root = await db.positions.get([rep, STARTING_FEN]);
+    if (root && !root.comment) {
+      root.comment = STARTING_POSITION_COMMENT;
+      root.updatedAt = Date.now();
+      positionCache[cacheKey(rep, STARTING_FEN)] = root;
+      await db.positions.put(toPlain(root));
+    }
+  }
+  localStorage.setItem(ROOT_COMMENT_MIGRATION_KEY, '1');
 }

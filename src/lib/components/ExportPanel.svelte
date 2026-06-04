@@ -1,7 +1,7 @@
 <script lang="ts">
   import { nav } from '../state/navigation.svelte';
   import { exportPositionsJson } from '../db/positionStore.svelte';
-  import { exportMainlinePgn } from '../utils/pgn';
+  import { exportRepertoirePgn } from '../utils/pgn';
   import { downloadFile } from '../utils/dom';
   import { Download, FileText, Code, X } from '@lucide/svelte';
 
@@ -13,15 +13,15 @@
 
   async function handleExportPgn() {
     status = 'exporting-pgn';
-    const pgn = exportMainlinePgn(nav.activeRepertoire);
-    downloadFile(pgn, 'repertoire.pgn', 'text/plain');
+    const pgn = exportRepertoirePgn(nav.activeRepertoire);
+    downloadFile(pgn, `repertoire-${nav.activeRepertoire}.pgn`, 'text/plain');
     status = '';
   }
 
   async function handleExportJson() {
     status = 'exporting-json';
     const json = await exportPositionsJson(nav.activeRepertoire);
-    downloadFile(json, 'repertoire.json', 'application/json');
+    downloadFile(json, `repertoire-${nav.activeRepertoire}.json`, 'application/json');
     status = '';
   }
 </script>
@@ -39,7 +39,7 @@
       <FileText size={24} />
       <div class="export-info">
         <span class="export-name">PGN</span>
-        <span class="export-desc">Main line as a single PGN game</span>
+        <span class="export-desc">Repertoire with variations</span>
       </div>
       <Download size={16} class="export-icon" />
     </button>

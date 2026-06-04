@@ -1,4 +1,23 @@
 export const STARTING_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -';
+export const STARTING_POSITION_COMMENT = `# Welcome to Opening Hub
+
+Build, organize, and study your chess opening repertoire.
+
+## Getting started
+
+- **Add moves** — click a piece on the board, then click a target square
+- **Edit details** — click the edit button to rename a position, add notes, links, or example games
+- **Navigate** — use the arrow buttons or click a move in the move list
+- **Organize** — assign comfort levels and move labels to track your progress
+
+## Features
+
+- Separate repertoires for White and Black
+- Import and export PGN or JSON
+- Search positions by name or comment
+- Detect issues like missing responses or transpositions
+
+Happy studying!`;
 export const COMFORT_COLORS: Record<string, string> = {
   easy: '#096e2e',
   comfortable: '#75eba0',
