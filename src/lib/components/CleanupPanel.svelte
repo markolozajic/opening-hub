@@ -1,6 +1,7 @@
 <script lang="ts">
   import { nav } from '../state/navigation.svelte';
-  import { getUnreachablePositions, deletePosition } from '../db/positionStore.svelte';
+  import { getUnreachablePositions } from '../utils/positionQueries';
+  import { deletePosition } from '../db/positionStore.svelte';
   import { X } from '@lucide/svelte';
 
   let {

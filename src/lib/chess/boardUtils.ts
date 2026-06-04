@@ -16,12 +16,6 @@ export function getLegalMoves(fen: string): VerboseMove[] {
   }
 }
 
-export function getLegalDestinations(fen: string, fromSq: string): string[] {
-  return getLegalMoves(fen)
-    .filter(m => m.from === fromSq)
-    .map(m => m.to);
-}
-
 export function findMoveBySquares(fen: string, fromSq: string, toSq: string): VerboseMove | undefined {
   return getLegalMoves(fen).find(m => m.from === fromSq && m.to === toSq);
 }

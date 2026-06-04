@@ -19,3 +19,13 @@ export const MOVE_LABEL_COLORS: Record<string, string> = {
   alternative: '#2563eb',
   avoid: '#dc2626',
 };
+export const COMFORT_RANK: Record<string, number> = {
+  uncomfortable: 0,
+  moderate: 1,
+  easy: 2,
+};
+export const COMFORT_PRIORITY: Record<string, number> = {
+  easy: 0,
+  moderate: 1,
+  uncomfortable: 2,
+};

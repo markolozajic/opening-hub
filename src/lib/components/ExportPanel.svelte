@@ -1,7 +1,8 @@
 <script lang="ts">
   import { nav } from '../state/navigation.svelte';
   import { exportPositionsJson } from '../db/positionStore.svelte';
-  import { exportMainlinePgn, downloadFile } from '../utils/pgn';
+  import { exportMainlinePgn } from '../utils/pgn';
+  import { downloadFile } from '../utils/dom';
   import { Download, FileText, Code, X } from '@lucide/svelte';
 
   let {

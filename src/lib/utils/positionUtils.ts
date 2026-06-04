@@ -1,7 +1,8 @@
 import type { ComfortLevel } from '../types';
+import { COMFORT_RANK } from '../constants';
 
 export function comfortRank(c: string | null | undefined): number {
-  return c === 'uncomfortable' ? 0 : c === 'moderate' ? 1 : 2;
+  return c ? (COMFORT_RANK[c] ?? 2) : 2;
 }
 
 export function sortMoves<T extends { san: string; comfort: ComfortLevel | null }>(

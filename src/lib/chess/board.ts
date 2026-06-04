@@ -3,6 +3,9 @@ import type { VerboseMove } from '../types';
 export const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 export const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
+export const LIGHT_SQUARE = '#f0d9b5';
+export const DARK_SQUARE = '#b58863';
+
 export const PIECE_URL: Record<string, string> = {
   wK: '/pieces/wk.svg', wQ: '/pieces/wq.svg', wR: '/pieces/wr.svg',
   wB: '/pieces/wb.svg', wN: '/pieces/wn.svg', wP: '/pieces/wp.svg',

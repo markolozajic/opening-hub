@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Chess } from 'chess.js';
-  import { initPositionStore, getPosition, addMove, removeMove, setMoveOrder, getRepertoirePositions, detectTranspositions, confirmMove, dismissMove, buildMovePath, findMoveNumber } from './lib/db/positionStore.svelte';
+  import { initPositionStore, getPosition, addMove, setMoveOrder, getRepertoirePositions, detectTranspositions, confirmMove, dismissMove } from './lib/db/positionStore.svelte';
+  import { findMoveNumber } from './lib/utils/positionQueries';
   import { nav, handleKeyDown, navigateTo } from './lib/state/navigation.svelte';
   import { invalidateComfortCache } from './lib/state/comfort.svelte';
   import { labelData, recomputeLabels } from './lib/state/labels.svelte';
@@ -34,7 +35,7 @@
 
   let currentPosition = $derived(getPosition(nav.activeRepertoire, nav.currentFen));
   let totalPositions = $derived(getRepertoirePositions(nav.activeRepertoire).length);
-  let movePath = $derived(buildMovePath(nav.activeRepertoire, nav.currentFen));
+  let movePath = $derived(nav.currentPath);
   let editBoardFen = $state<string | null>(null);
   let lastInsertToFen = $state<string | null>(null);
   let displayFen = $derived(editBoardFen ?? nav.currentFen);

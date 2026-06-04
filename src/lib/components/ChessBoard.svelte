@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { parseFenBoard, getSquareColor, PIECE_URL, displayToReal, realToDisplay, parseSq } from '../chess/board';
+  import { parseFenBoard, getSquareColor, PIECE_URL, displayToReal, realToDisplay, parseSq, LIGHT_SQUARE, DARK_SQUARE } from '../chess/board';
 
   let {
     fen = '',
     selectedSquare = null as string | null,
     highlightedSquares = [] as string[],
-    lastMoveSquares = [] as string[],
     interactive = false,
     flipped = false,
     size = 480,
@@ -45,11 +44,6 @@
   function getDisplayHighlighted(df: number, dr: number): boolean {
     const { sq } = displayToReal(df, dr, flipped);
     return highlightedSquares.includes(sq);
-  }
-
-  function getDisplayLastMove(df: number, dr: number): boolean {
-    const { sq } = displayToReal(df, dr, flipped);
-    return lastMoveSquares.includes(sq);
   }
 
   function handlePointerDown(e: PointerEvent) {
@@ -143,7 +137,6 @@
       {@const isLight = getSquareColor(rf, rr) === 'light'}
       {@const isSel = selectedDisplay && selectedDisplay.displayFile === df && selectedDisplay.displayRank === dr}
       {@const isHigh = getDisplayHighlighted(df, dr)}
-      {@const isLM = getDisplayLastMove(df, dr)}
       {@const isDragSq = isDragSource(df, dr)}
 
       <rect
@@ -151,9 +144,7 @@
         y={dr * cellSize}
         width={cellSize}
         height={cellSize}
-        fill={isLight ? '#f0d9b5' : '#b58863'}
-        stroke={isLM ? '#fff' : 'none'}
-        stroke-width={isLM ? '2' : '0'}
+        fill={isLight ? LIGHT_SQUARE : DARK_SQUARE}
       />
 
       {#if isSel}

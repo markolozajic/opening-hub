@@ -2,43 +2,11 @@ import { Chess } from 'chess.js';
 import { db } from './schema';
 import type { Position, Repertoire, ComfortLevel, Link, PgnAttachment, MoveLabel } from '../types';
 import { cacheKey, toChessJsFen, getTurn, normalizeFen } from '../utils/fen';
+import { STARTING_FEN } from '../constants';
+import { migrateMoveLabels, migrateComfortCoherence } from './migrations';
+import { findMoveNumber } from '../utils/positionQueries';
 
 export const positionCache: Record<string, Position> = $state({});
-
-export function formatSanWithNumber(san: string, parentFen: string): string {
-  try {
-    const chess = new Chess(toChessJsFen(parentFen));
-    chess.move(san);
-    const halfMoves = chess.history().length;
-    const moveNum = Math.ceil(halfMoves / 2);
-    const turn = chess.turn();
-    return turn === 'b' ? `${moveNum}. ${san}` : `${moveNum}... ${san}`;
-  } catch {
-    return san;
-  }
-}
-
-export function findMoveNumber(repertoire: Repertoire, fen: string): number | null {
-  const rootFen = getRootFen();
-  if (fen === rootFen) return 0;
-  const visited = new Set<string>();
-  const queue: { f: string; depth: number }[] = [{ f: rootFen, depth: 0 }];
-  while (queue.length > 0) {
-    const { f, depth } = queue.shift()!;
-    if (visited.has(f)) continue;
-    visited.add(f);
-    if (f === fen) return depth;
-    const pos = positionCache[cacheKey(repertoire, f)];
-    if (pos) {
-      for (const edge of Object.values(pos.moves)) {
-        if (!visited.has(edge.toFen)) {
-          queue.push({ f: edge.toFen, depth: depth + 1 });
-        }
-      }
-    }
-  }
-  return null;
-}
 
 function endsWithMove(name: string): boolean {
   const last = name.split(/[, ]+/).pop()?.trim() ?? '';
@@ -51,20 +19,17 @@ function computeAutoName(
   parentName: string | undefined,
   parentIsAutoNamed: boolean,
   san: string,
-  parentFen: string,
-  labeledSan?: string,
+  labeledSan: string,
+  turn: 'w' | 'b',
 ): string {
-  const fallbackLabeled = labeledSan ?? formatSanWithNumber(san, parentFen);
-  if (!parentName) return fallbackLabeled;
+  if (!parentName) return labeledSan;
   if (parentIsAutoNamed) {
-    const turn = getTurn(parentFen);
-    return parentName + ' ' + (turn === 'b' ? san : fallbackLabeled);
+    return parentName + ' ' + (turn === 'b' ? san : labeledSan);
   }
   if (endsWithMove(parentName)) {
-    const turn = getTurn(parentFen);
-    return parentName + ' ' + (turn === 'b' ? san : fallbackLabeled);
+    return parentName + ' ' + (turn === 'b' ? san : labeledSan);
   }
-  return parentName + ', ' + fallbackLabeled;
+  return parentName + ', ' + labeledSan;
 }
 
 function toPlain(pos: Position): Position {
@@ -100,53 +65,8 @@ export async function initPositionStore(): Promise<void> {
   await migrateComfortCoherence();
 }
 
-const MIGRATION_KEY = 'opening-hub-label-migrated';
-
-async function migrateMoveLabels(): Promise<void> {
-  if (localStorage.getItem(MIGRATION_KEY)) return;
-  const allRepertoires: Repertoire[] = ['white', 'black'];
-  for (const rep of allRepertoires) {
-    const ourSide = rep === 'white' ? 'w' : 'b';
-    const positions = await db.positions.where('repertoire').equals(rep).toArray();
-    for (const pos of positions) {
-      const turn = getTurn(pos.fen);
-      if (turn !== ourSide) continue;
-      let changed = false;
-      for (const edge of Object.values(pos.moves)) {
-        if (!edge.label) {
-          edge.label = 'main';
-          changed = true;
-        }
-      }
-      if (changed) {
-        positionCache[cacheKey(pos.repertoire, pos.fen)] = pos;
-        await db.positions.put(toPlain(pos));
-      }
-    }
-  }
-  localStorage.setItem(MIGRATION_KEY, '1');
-}
-
-const COMFORT_MIGRATION_KEY = 'opening-hub-comfort-migrated';
-
-async function migrateComfortCoherence(): Promise<void> {
-  if (localStorage.getItem(COMFORT_MIGRATION_KEY)) return;
-  const allRepertoires: Repertoire[] = ['white', 'black'];
-  for (const rep of allRepertoires) {
-    const positions = await db.positions.where('repertoire').equals(rep).toArray();
-    for (const pos of positions) {
-      if (Object.keys(pos.moves).length > 0 && pos.comfortLevel !== undefined) {
-        pos.comfortLevel = undefined;
-        positionCache[cacheKey(pos.repertoire, pos.fen)] = pos;
-        await db.positions.put(toPlain(pos));
-      }
-    }
-  }
-  localStorage.setItem(COMFORT_MIGRATION_KEY, '1');
-}
-
 export function getRootFen(): string {
-  return 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -';
+  return STARTING_FEN;
 }
 
 export function getPosition(repertoire: Repertoire, fen: string): Position | undefined {
@@ -159,109 +79,6 @@ export function getRepertoirePositions(repertoire: Repertoire): Position[] {
     .filter(([k]) => k.startsWith(prefix))
     .map(([, v]) => v)
     .sort((a, b) => b.updatedAt - a.updatedAt);
-}
-
-export function getUnreachablePositions(repertoire: Repertoire): Position[] {
-  const rootFen = getRootFen();
-  const reachable = new Set<string>();
-
-  const stack = [rootFen];
-  while (stack.length > 0) {
-    const fen = stack.pop()!;
-    if (reachable.has(fen)) continue;
-    reachable.add(fen);
-    const pos = positionCache[cacheKey(repertoire, fen)];
-    if (pos) {
-      for (const edge of Object.values(pos.moves)) {
-        stack.push(edge.toFen);
-      }
-    }
-  }
-
-  const prefix = `${repertoire}|`;
-  return Object.entries(positionCache)
-    .filter(([k]) => k.startsWith(prefix))
-    .map(([, v]) => v)
-    .filter(p => !reachable.has(p.fen));
-}
-
-export interface MovePathStep {
-  fen: string;
-  toFen: string;
-  san: string;
-}
-
-export function buildMovePath(repertoire: Repertoire, targetFen: string): MovePathStep[] {
-  const rootFen = getRootFen();
-  if (targetFen === rootFen) return [];
-
-  const parentMap = new Map<string, { parentFen: string; san: string }>();
-  const prefix = `${repertoire}|`;
-  for (const [key, pos] of Object.entries(positionCache)) {
-    if (!key.startsWith(prefix)) continue;
-    for (const [san, edge] of Object.entries(pos.moves)) {
-      if (!parentMap.has(edge.toFen)) {
-        parentMap.set(edge.toFen, { parentFen: pos.fen, san });
-      }
-    }
-  }
-
-  const path: MovePathStep[] = [];
-  let current = targetFen;
-  while (current !== rootFen) {
-    const entry = parentMap.get(current);
-    if (!entry) break;
-    path.unshift({ fen: entry.parentFen, toFen: current, san: entry.san });
-    current = entry.parentFen;
-  }
-  return path;
-}
-
-export function findAllTranspositionPaths(repertoire: Repertoire, targetFen: string): MovePathStep[][] {
-  const rootFen = getRootFen();
-  if (targetFen === rootFen) return [];
-
-  const paths: MovePathStep[][] = [];
-  const visited = new Set<string>();
-
-  function dfs(fen: string, path: MovePathStep[]) {
-    if (fen === targetFen) {
-      paths.push([...path]);
-      return;
-    }
-    const pos = getPosition(repertoire, fen);
-    if (!pos) return;
-    for (const [san, edge] of Object.entries(pos.moves)) {
-      if (visited.has(edge.toFen)) continue;
-      visited.add(edge.toFen);
-      path.push({ fen, toFen: edge.toFen, san });
-      dfs(edge.toFen, path);
-      path.pop();
-      visited.delete(edge.toFen);
-    }
-  }
-
-  visited.add(rootFen);
-  dfs(rootFen, []);
-  return paths;
-}
-
-export function getOrCreatePosition(repertoire: Repertoire, fen: string): Position {
-  const key = cacheKey(repertoire, fen);
-  if (positionCache[key]) return positionCache[key];
-  const now = Date.now();
-  const pos: Position = {
-    repertoire,
-    fen,
-    moves: {},
-    links: [],
-    pgnAttachments: [],
-    createdAt: now,
-    updatedAt: now,
-  };
-  positionCache[key] = pos;
-  db.positions.put(toPlain(pos));
-  return pos;
 }
 
 export async function detectTranspositions(repertoire: Repertoire, fen: string): Promise<void> {
@@ -349,7 +166,7 @@ export async function addMove(repertoire: Repertoire, fromFen: string, san: stri
       const turn = getTurn(fromFen);
       labeledSan = turn === 'w' ? `${moveNum}. ${san}` : `${moveNum}... ${san}`;
     }
-    to.name = computeAutoName(from.name, from.autoNamed ?? false, san, fromFen, labeledSan);
+    to.name = computeAutoName(from.name, from.autoNamed ?? false, san, labeledSan || san, getTurn(fromFen) as 'w' | 'b');
     to.autoNamed = true;
     to.updatedAt = Date.now();
     await db.positions.put(toPlain(to));
@@ -359,17 +176,6 @@ export async function addMove(repertoire: Repertoire, fromFen: string, san: stri
     from.moveOrder.push(san);
   }
   from.moves[san] = { toFen, comment };
-  from.updatedAt = Date.now();
-  await db.positions.put(toPlain(from));
-}
-
-export async function removeMove(repertoire: Repertoire, fromFen: string, san: string): Promise<void> {
-  const from = getPosition(repertoire, fromFen);
-  if (!from) return;
-  if (from.moveOrder) {
-    from.moveOrder = from.moveOrder.filter(s => s !== san);
-  }
-  delete from.moves[san];
   from.updatedAt = Date.now();
   await db.positions.put(toPlain(from));
 }
@@ -478,4 +284,22 @@ export async function importPositionsJson(json: string): Promise<void> {
       await db.positions.put(toPlain(p));
     }
   });
+}
+
+export function getOrCreatePosition(repertoire: Repertoire, fen: string): Position {
+  const key = cacheKey(repertoire, fen);
+  if (positionCache[key]) return positionCache[key];
+  const now = Date.now();
+  const pos: Position = {
+    repertoire,
+    fen,
+    moves: {},
+    links: [],
+    pgnAttachments: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+  positionCache[key] = pos;
+  db.positions.put(toPlain(pos));
+  return pos;
 }

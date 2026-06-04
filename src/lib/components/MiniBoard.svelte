@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { parseFenBoard, getSquareColor, PIECE_URL, displayToReal } from '../chess/board';
+  import { parseFenBoard, getSquareColor, PIECE_URL, displayToReal, LIGHT_SQUARE, DARK_SQUARE } from '../chess/board';
 
   let {
     fen = '',
@@ -27,7 +27,7 @@
         y={dr * cellSize}
         width={cellSize}
         height={cellSize}
-        fill={isLight ? '#f0d9b5' : '#b58863'}
+        fill={isLight ? LIGHT_SQUARE : DARK_SQUARE}
       />
       {#if piece}
         <image

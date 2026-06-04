@@ -1,14 +1,12 @@
 import type { ComfortLevel, Repertoire } from '../types';
 import { getPosition } from '../db/positionStore.svelte';
 import { getTurn } from '../utils/fen';
+import { COMFORT_PRIORITY } from '../constants';
 
 const comfortCache: Record<string, ComfortLevel | null> = {};
 
 function comfortPriority(level: ComfortLevel | null): number {
-  if (level === 'uncomfortable') return 2;
-  if (level === 'moderate') return 1;
-  if (level === 'easy') return 0;
-  return -1;
+  return level ? (COMFORT_PRIORITY[level] ?? -1) : -1;
 }
 
 function fromPriority(p: number): ComfortLevel | null {

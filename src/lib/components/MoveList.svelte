@@ -1,13 +1,15 @@
 <script lang="ts">
   import { nav } from '../state/navigation.svelte';
   import { labelData } from '../state/labels.svelte';
-  import { getPosition, findMoveNumber, findAllTranspositionPaths } from '../db/positionStore.svelte';
+  import { getPosition } from '../db/positionStore.svelte';
+  import { findMoveNumber, findAllTranspositionPaths } from '../utils/positionQueries';
+  import type { MovePathStep } from '../utils/positionQueries';
   import { getComfort } from '../state/comfort.svelte';
   import { getTurn } from '../utils/fen';
   import { sortMoves, formatNumberedSan } from '../utils/positionUtils';
   import MiniBoard from './MiniBoard.svelte';
   import ComfortBadge from './ComfortBadge.svelte';
-  import { navigateTo } from '../state/navigation.svelte';
+  import { navigateTo, navigatePath } from '../state/navigation.svelte';
   import { Trash2, GripVertical, Eye, X } from '@lucide/svelte';
 
   let {
@@ -44,7 +46,7 @@
   let dragIndex = $state<number | null>(null);
   let dragOverIndex = $state<number | null>(null);
   let showTranspositionsFor = $state<string | null>(null);
-  let transpositionPaths = $state<{ san: string; toFen: string }[][]>([]);
+  let transpositionPaths = $state<MovePathStep[][]>([]);
   let transpositionTargetName = $state('');
   let transpositionDialogRef = $state<HTMLDialogElement | null>(null);
 
@@ -108,6 +110,7 @@
     transpositionTargetName = target?.name ?? toFen;
     transpositionPaths = paths.map(path =>
       path.map(step => ({
+        fen: step.fen,
         san: step.san,
         toFen: step.toFen,
       }))
@@ -119,6 +122,10 @@
     showTranspositionsFor = null;
     transpositionPaths = [];
     transpositionDialogRef?.close();
+  }
+
+  function handlePathStepClick(path: MovePathStep[], targetIndex: number) {
+    navigatePath(path, targetIndex);
   }
 </script>
 
@@ -211,7 +218,7 @@
             <span class="path-label">── Path {i + 1} ──</span>
             <div class="path-moves">
               {#each path as step, j}
-                <button class="path-step" onclick={() => navigateTo(step.toFen)}>
+                <button class="path-step" onclick={() => handlePathStepClick(path, j)}>
                   {j % 2 === 0 ? `${Math.floor(j / 2) + 1}. ` : ''}{step.san}
                 </button>
               {/each}

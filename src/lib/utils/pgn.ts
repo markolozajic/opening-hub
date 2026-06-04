@@ -2,6 +2,7 @@ import { Chess } from 'chess.js';
 import { getPosition, addMove } from '../db/positionStore.svelte';
 import { normalizeFen, toChessJsFen } from './fen';
 import type { Repertoire } from '../types';
+import { STARTING_FEN } from '../constants';
 
 export async function importPgn(repertoire: Repertoire, pgnText: string): Promise<number> {
   const chess = new Chess();
@@ -16,7 +17,7 @@ export async function importPgn(repertoire: Repertoire, pgnText: string): Promis
     after: string;
   }>;
 
-  const rootFen = normalizeFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -');
+  const rootFen = normalizeFen(STARTING_FEN);
   let prevFen = rootFen;
   let count = 0;
 
@@ -31,7 +32,7 @@ export async function importPgn(repertoire: Repertoire, pgnText: string): Promis
 }
 
 export function exportMainlinePgn(repertoire: Repertoire, fromFen?: string): string {
-  const rootFen = normalizeFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -');
+  const rootFen = normalizeFen(STARTING_FEN);
   const startFen = fromFen || rootFen;
   const chess = new Chess(toChessJsFen(startFen));
   let fen = startFen;
@@ -58,14 +59,4 @@ export function exportMainlinePgn(repertoire: Repertoire, fromFen?: string): str
   }
 
   return chess.pgn();
-}
-
-export function downloadFile(content: string, filename: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
 }
