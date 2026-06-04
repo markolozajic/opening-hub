@@ -1,13 +1,17 @@
 export const STARTING_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -';
 export const COMFORT_COLORS: Record<string, string> = {
-  easy: '#22c55e',
+  easy: '#096e2e',
+  comfortable: '#75eba0',
   moderate: '#f59e0b',
-  uncomfortable: '#ef4444',
+  uncomfortable: '#f35353',
+  struggling: '#990a0a',
 };
 export const COMFORT_LABELS: Record<string, string> = {
   easy: 'Easy',
+  comfortable: 'Comfortable',
   moderate: 'Moderate',
   uncomfortable: 'Uncomfortable',
+  struggling: 'Struggling',
 };
 export const MOVE_LABELS: Record<string, string> = {
   main: 'Main',
@@ -20,12 +24,16 @@ export const MOVE_LABEL_COLORS: Record<string, string> = {
   avoid: '#dc2626',
 };
 export const COMFORT_RANK: Record<string, number> = {
-  uncomfortable: 0,
-  moderate: 1,
-  easy: 2,
+  struggling: 0,
+  uncomfortable: 1,
+  moderate: 2,
+  comfortable: 3,
+  easy: 4,
 };
 export const COMFORT_PRIORITY: Record<string, number> = {
   easy: 0,
-  moderate: 1,
-  uncomfortable: 2,
+  comfortable: 1,
+  moderate: 2,
+  uncomfortable: 3,
+  struggling: 4,
 };

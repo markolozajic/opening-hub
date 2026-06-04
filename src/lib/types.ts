@@ -1,6 +1,6 @@
 export type Repertoire = 'white' | 'black';
 
-export type ComfortLevel = 'easy' | 'moderate' | 'uncomfortable';
+export type ComfortLevel = 'easy' | 'comfortable' | 'moderate' | 'uncomfortable' | 'struggling';
 export type MoveLabel = 'main' | 'alternative' | 'avoid';
 
 export interface MoveEdge {

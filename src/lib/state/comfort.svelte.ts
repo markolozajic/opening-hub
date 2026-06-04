@@ -5,15 +5,14 @@ import { COMFORT_PRIORITY } from '../constants';
 
 const comfortCache: Record<string, ComfortLevel | null> = {};
 
+const PRIORITY_ORDER: ComfortLevel[] = ['easy', 'comfortable', 'moderate', 'uncomfortable', 'struggling'];
+
 function comfortPriority(level: ComfortLevel | null): number {
   return level ? (COMFORT_PRIORITY[level] ?? -1) : -1;
 }
 
 function fromPriority(p: number): ComfortLevel | null {
-  if (p >= 2) return 'uncomfortable';
-  if (p === 1) return 'moderate';
-  if (p === 0) return 'easy';
-  return null;
+  return p >= 0 && p < PRIORITY_ORDER.length ? PRIORITY_ORDER[p] : null;
 }
 
 function computeComfortFor(repertoire: Repertoire, fen: string): ComfortLevel | null {

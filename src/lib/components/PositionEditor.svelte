@@ -195,7 +195,7 @@
       <div class="field">
         <span class="label">Comfort Level</span>
         <div class="comfort-options">
-          {#each ['easy', 'moderate', 'uncomfortable'] as level}
+          {#each ['easy', 'comfortable', 'moderate', 'uncomfortable', 'struggling'] as level}
             {@const isSelected = comfort === level}
             <button
               class="comfort-btn"

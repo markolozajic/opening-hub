@@ -54,8 +54,10 @@
     <select bind:value={filterComfort} class="filter-select">
       <option value="">All comfort</option>
       <option value="easy">Easy</option>
+      <option value="comfortable">Comfortable</option>
       <option value="moderate">Moderate</option>
       <option value="uncomfortable">Uncomfortable</option>
+      <option value="struggling">Struggling</option>
     </select>
     <label class="terminal-toggle">
       <input type="checkbox" bind:checked={showTerminalOnly} />
