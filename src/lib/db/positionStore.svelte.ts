@@ -3,7 +3,7 @@ import { db } from './schema';
 import type { Position, Repertoire, ComfortLevel, Link, PgnAttachment, MoveLabel } from '../types';
 import { cacheKey, toChessJsFen, getTurn, normalizeFen } from '../utils/fen';
 import { STARTING_FEN } from '../constants';
-import { migrateMoveLabels, migrateComfortCoherence } from './migrations';
+  import { migrateMoveLabels, migrateComfortCoherence, migrateUnlabeledMoves } from './migrations';
 import { findMoveNumber } from '../utils/positionQueries';
 
 export const positionCache: Record<string, Position> = $state({});
@@ -63,6 +63,7 @@ export async function initPositionStore(): Promise<void> {
   ensureRoot('black');
   await migrateMoveLabels();
   await migrateComfortCoherence();
+  await migrateUnlabeledMoves();
 }
 
 export function getRootFen(): string {

@@ -260,9 +260,6 @@
                   {MOVE_LABELS[l]}
                 </button>
               {/each}
-              {#if currentLabel}
-                <button class="clear-label" onclick={() => delete moveLabels[move.san]}>Clear</button>
-              {/if}
             </div>
           </div>
         {/each}
@@ -357,10 +354,5 @@
     transition: all 0.15s;
   }
   .label-btn:hover { opacity: 0.85; }
-  .clear-label {
-    background: none; border: none; cursor: pointer; font-size: 0.7rem;
-    color: var(--muted); padding: 0.25rem; font-family: inherit;
-  }
-  .clear-label:hover { color: var(--danger); }
   .label-error { color: var(--danger); font-size: 0.75rem; margin: 0; }
 </style>
