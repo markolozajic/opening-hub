@@ -1,10 +1,9 @@
 <script lang="ts">
-  import type { Position, ComfortLevel, Link, PgnAttachment, Repertoire, MoveLabel } from '../types';
+  import type { Position, ComfortLevel, Link, PgnAttachment, Repertoire } from '../types';
   import { nav } from '../state/navigation.svelte';
-  import { setPositionName, setPositionComment, setComfortLevel, addLink, removeLink, addPgnAttachment, removePgnAttachment, getPosition, setMoveLabel, updateLink } from '../db/positionStore.svelte';
+  import { setPositionName, setPositionComment, setComfortLevel, addLink, removeLink, addPgnAttachment, removePgnAttachment, getPosition, updateLink } from '../db/positionStore.svelte';
   import { invalidateComfortCache } from '../state/comfort.svelte';
-  import { COMFORT_COLORS, COMFORT_LABELS, MOVE_LABELS, MOVE_LABEL_COLORS } from '../constants';
-  import { getTurn } from '../utils/fen';
+  import { COMFORT_COLORS, COMFORT_LABELS } from '../constants';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import LinkList from './LinkList.svelte';
   import PgnAttachmentList from './PgnAttachmentList.svelte';
@@ -23,12 +22,9 @@
   let comfort = $state<ComfortLevel | undefined>(undefined);
   let previewMode = $state(false);
   let saving = $state(false);
-  let moveLabels = $state<Record<string, MoveLabel>>({});
-  let labelError = $state('');
+
   let textareaRef = $state<HTMLTextAreaElement | null>(null);
   let lastProcessedKey = '';
-  let ourSide = $derived(position ? (position.repertoire === 'white' ? 'w' : 'b') : null);
-
   const LINK_RE = /\[([^\]]*)\]\(opening:\/\/navigate\/([^)]+)\)/g;
 
   function parseCommentLinks(text: string): Array<{ start: number; end: number; fen: string }> {
@@ -65,33 +61,17 @@
     }
   }
 
-  let ourMoves = $derived(
-    position && ourSide
-      ? Object.entries(position.moves)
-          .filter(([, edge]) => getTurn(position.fen) === ourSide)
-          .map(([san, edge]) => ({ san, label: moveLabels[san] ?? edge.label }))
-      : []
-  );
-
   $effect(() => {
     const p = position;
     const data = untrack(() => p ? {
       name: p.name ?? '',
       comment: p.comment ?? '',
       comfort: p.comfortLevel,
-      labels: Object.fromEntries(
-        Object.entries(p.moves)
-          .filter(([, edge]) => getTurn(p.fen) === (p.repertoire === 'white' ? 'w' : 'b'))
-          .map(([san, edge]) => [san, edge.label])
-          .filter(([, l]) => l !== undefined)
-      ),
     } : null);
     if (data) {
       name = data.name;
       comment = data.comment;
       comfort = data.comfort;
-      moveLabels = { ...data.labels };
-      labelError = '';
     }
   });
 
@@ -119,7 +99,6 @@
 
   async function handleSave() {
     if (!position) return;
-    labelError = '';
 
     saving = true;
     const r: Repertoire = position.repertoire;
@@ -127,9 +106,6 @@
     await setPositionName(r, f, name || undefined);
     await setPositionComment(r, f, comment || undefined);
     await setComfortLevel(r, f, comfort);
-    for (const [san, label] of Object.entries(moveLabels)) {
-      await setMoveLabel(r, f, san, label);
-    }
     invalidateComfortCache(r, f);
     saving = false;
     onClose?.();
@@ -239,36 +215,6 @@
       {/if}
     </div>
 
-    {#if ourMoves.length > 1}
-      <div class="field">
-        <span class="label">Move Labels</span>
-        {#each ourMoves as move}
-          {@const currentLabel = moveLabels[move.san] ?? move.label}
-          <div class="move-label-row">
-            <span class="move-label-san">{move.san}</span>
-            <div class="move-label-options">
-              {#each ['main', 'alternative', 'avoid'] as l}
-                {@const isSelected = currentLabel === l}
-                <button
-                  class="label-btn"
-                  class:selected={isSelected}
-                  style:border-color={MOVE_LABEL_COLORS[l]}
-                  style:background={isSelected ? MOVE_LABEL_COLORS[l] : 'transparent'}
-                  style:color={isSelected ? '#fff' : 'inherit'}
-                  onclick={() => moveLabels[move.san] = l as MoveLabel}
-                >
-                  {MOVE_LABELS[l]}
-                </button>
-              {/each}
-            </div>
-          </div>
-        {/each}
-        {#if labelError}
-          <p class="label-error">{labelError}</p>
-        {/if}
-      </div>
-    {/if}
-
     <div class="field">
       <span class="label">Links</span>
       <LinkList
@@ -341,18 +287,4 @@
   .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   .btn.primary:hover { opacity: 0.9; }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .move-label-row {
-    display: flex; align-items: center; gap: 0.5rem;
-    padding: 0.375rem 0; border-bottom: 1px solid var(--border);
-  }
-  .move-label-row:last-child { border-bottom: none; }
-  .move-label-san { font-weight: 600; font-size: 0.875rem; color: var(--text-h); min-width: 3rem; }
-  .move-label-options { display: flex; gap: 0.25rem; align-items: center; }
-  .label-btn {
-    padding: 0.25rem 0.5rem; border: 2px solid; border-radius: 4px;
-    cursor: pointer; font-size: 0.75rem; font-weight: 500; font-family: inherit;
-    transition: all 0.15s;
-  }
-  .label-btn:hover { opacity: 0.85; }
-  .label-error { color: var(--danger); font-size: 0.75rem; margin: 0; }
 </style>

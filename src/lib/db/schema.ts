@@ -5,7 +5,7 @@ export class OpeningHubDB extends Dexie {
   positions: Table<Position, [string, string]>;
 
   constructor() {
-    super('OpeningAnalysisHub');
+    super('OpeningHub');
     this.version(1).stores({});
     this.version(2).stores({ positions: null });
     this.version(3).stores({

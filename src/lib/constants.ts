@@ -18,11 +18,6 @@ export const MOVE_LABELS: Record<string, string> = {
   alternative: 'Alternative',
   avoid: 'Avoid',
 };
-export const MOVE_LABEL_COLORS: Record<string, string> = {
-  main: '#f1cc27',
-  alternative: '#2563eb',
-  avoid: '#dc2626',
-};
 export const COMFORT_VALUE: Record<string, number> = {
   struggling: 0,
   uncomfortable: 1,

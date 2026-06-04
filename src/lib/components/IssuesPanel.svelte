@@ -4,7 +4,6 @@
   import { getPosition } from '../db/positionStore.svelte';
   import { getComfort } from '../state/comfort.svelte';
   import { navigateTo } from '../state/navigation.svelte';
-  import { MOVE_LABEL_COLORS } from '../constants';
   import MiniBoard from './MiniBoard.svelte';
   import ComfortBadge from './ComfortBadge.svelte';
 

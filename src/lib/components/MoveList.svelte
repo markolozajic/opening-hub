@@ -1,9 +1,10 @@
 <script lang="ts">
   import { nav } from '../state/navigation.svelte';
   import { labelData } from '../state/labels.svelte';
-  import { getPosition, setMoveMarker } from '../db/positionStore.svelte';
+  import { getPosition, setMoveMarker, setMoveLabel, setComfortLevel } from '../db/positionStore.svelte';
   import { findMoveNumber, findAllTranspositionPaths } from '../utils/positionQueries';
-  import type { MovePathStep, MoveMarker } from '../types';
+  import type { MovePathStep, MoveMarker, ComfortLevel, MoveLabel } from '../types';
+  import { COMFORT_COLORS, COMFORT_LABELS, MOVE_LABELS } from '../constants';
   import { getComfort } from '../state/comfort.svelte';
   import { getTurn } from '../utils/fen';
   import { sortMoves, formatNumberedSan } from '../utils/positionUtils';
@@ -130,33 +131,65 @@
     navigatePath(path, targetIndex);
   }
 
-  let editMarkerForSan = $state<string | null>(null);
-  let editMarkerCurrent = $state<MoveMarker | undefined>(undefined);
-  let markerDialogRef = $state<HTMLDialogElement | null>(null);
+  let editMoveSan = $state<string | null>(null);
+  let editCurrentMarker = $state<MoveMarker | undefined>(undefined);
+  let editCurrentLabel = $state<MoveLabel | undefined>(undefined);
+  let editCurrentComfort = $state<ComfortLevel | undefined>(undefined);
+  let editToFen = $state<string>('');
+  let editIsLeaf = $state(false);
+  let editShowLabel = $state(false);
+  let metaDialogRef = $state<HTMLDialogElement | null>(null);
+
+  let ourTurn = $derived(getTurn(nav.currentFen) === (nav.activeRepertoire === 'white' ? 'w' : 'b'));
+  let moveCount = $derived(position ? Object.keys(position.moves).length : 0);
 
   $effect(() => {
-    if (markerDialogRef && editMarkerForSan !== null) {
-      markerDialogRef.showModal();
+    if (metaDialogRef && editMoveSan !== null) {
+      metaDialogRef.showModal();
     }
   });
 
   function handleEditMetadata(san: string) {
-    editMarkerCurrent = position?.moves[san]?.marker;
-    editMarkerForSan = san;
+    const edge = position?.moves[san];
+    if (!edge) return;
+    editCurrentMarker = edge.marker;
+    editCurrentLabel = edge.label;
+    editMoveSan = san;
+    editToFen = edge.toFen;
+    const childPos = getPosition(nav.activeRepertoire, edge.toFen);
+    editIsLeaf = childPos ? Object.keys(childPos.moves).length === 0 : false;
+    editCurrentComfort = childPos?.comfortLevel;
+    editShowLabel = ourTurn && moveCount > 1;
   }
 
-  async function handleSetMarker(marker: MoveMarker | undefined) {
-    if (editMarkerForSan === null) return;
-    await setMoveMarker(nav.activeRepertoire, nav.currentFen, editMarkerForSan, marker);
-    editMarkerForSan = null;
-    editMarkerCurrent = undefined;
-    markerDialogRef?.close();
+  async function handleSaveMeta() {
+    if (editMoveSan === null) return;
+    const rep = nav.activeRepertoire;
+    const fen = nav.currentFen;
+    const san = editMoveSan;
+
+    await setMoveMarker(rep, fen, san, editCurrentMarker);
+
+    if (editShowLabel) {
+      await setMoveLabel(rep, fen, san, editCurrentLabel);
+    }
+
+    if (editIsLeaf && editToFen) {
+      await setComfortLevel(rep, editToFen, editCurrentComfort);
+    }
+
+    closeMetaDialog();
   }
 
-  function closeMarkerDialog() {
-    editMarkerForSan = null;
-    editMarkerCurrent = undefined;
-    markerDialogRef?.close();
+  function closeMetaDialog() {
+    editMoveSan = null;
+    editCurrentMarker = undefined;
+    editCurrentLabel = undefined;
+    editCurrentComfort = undefined;
+    editToFen = '';
+    editIsLeaf = false;
+    editShowLabel = false;
+    metaDialogRef?.close();
   }
 </script>
 
@@ -270,35 +303,80 @@
 </dialog>
 
 <dialog
-  class="marker-dialog"
-  bind:this={markerDialogRef}
-  onclick={(e) => { if (e.target === markerDialogRef) closeMarkerDialog(); }}
-  onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); closeMarkerDialog(); } }}
-  onclose={closeMarkerDialog}
+  class="meta-dialog"
+  bind:this={metaDialogRef}
+  onclick={(e) => { if (e.target === metaDialogRef) closeMetaDialog(); }}
+  onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); closeMetaDialog(); } }}
+  onclose={closeMetaDialog}
 >
-  {#if editMarkerForSan !== null}
+  {#if editMoveSan !== null}
     <div class="dialog-header">
-      <h3 class="dialog-title">Marker for {editMarkerForSan}</h3>
-      <button class="btn-icon" onclick={closeMarkerDialog} title="Close">
+      <h3 class="dialog-title">{editMoveSan}</h3>
+      <button class="btn-icon" onclick={closeMetaDialog} title="Close">
         <X size={14} />
       </button>
     </div>
-    <div class="dialog-body marker-options">
-      {#each ['!!', '!', '!?', '?!', '?', '??'] as marker}
-        {@const isSelected = editMarkerCurrent === marker}
-        <button
-          class="marker-btn"
-          class:selected={isSelected}
-          onclick={() => editMarkerCurrent = marker as MoveMarker}
-        >
-          {marker}
-        </button>
-      {/each}
-      <div class="marker-actions">
-        {#if editMarkerCurrent}
-          <button class="btn" onclick={async () => { await handleSetMarker(undefined); }}>Clear</button>
-        {/if}
-        <button class="btn primary" onclick={async () => { await handleSetMarker(editMarkerCurrent); }}>Save</button>
+    <div class="dialog-body">
+      {#if editShowLabel}
+        <div class="dialog-section">
+          <span class="dialog-section-title">Label</span>
+          <div class="label-options">
+            {#each ['main', 'alternative', 'avoid'] as l}
+              {@const isSelected = editCurrentLabel === l}
+              <button
+                class="meta-btn label-btn"
+                class:selected={isSelected}
+                class:meta-btn-main={l === 'main'}
+                class:meta-btn-alt={l === 'alternative'}
+                class:meta-btn-avoid={l === 'avoid'}
+                onclick={() => editCurrentLabel = isSelected ? undefined : l as MoveLabel}
+              >
+                {MOVE_LABELS[l]}
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
+
+      <div class="dialog-section">
+        <span class="dialog-section-title">Marker</span>
+        <div class="marker-options">
+          {#each ['!!', '!', '!?', '?!', '?', '??'] as marker}
+            {@const isSelected = editCurrentMarker === marker}
+            <button
+              class="meta-btn"
+              class:selected={isSelected}
+              onclick={() => editCurrentMarker = isSelected ? undefined : marker as MoveMarker}
+            >
+              {marker}
+            </button>
+          {/each}
+        </div>
+      </div>
+
+      {#if editIsLeaf}
+        <div class="dialog-section">
+          <span class="dialog-section-title">Comfort</span>
+          <div class="comfort-options">
+            {#each ['easy', 'comfortable', 'moderate', 'uncomfortable', 'struggling'] as level}
+              {@const isSelected = editCurrentComfort === level}
+              <button
+                class="meta-btn comfort-btn"
+                class:selected={isSelected}
+                style:border-color={COMFORT_COLORS[level]}
+                style:background={isSelected ? COMFORT_COLORS[level] : 'transparent'}
+                style:color={isSelected ? '#fff' : 'inherit'}
+                onclick={() => editCurrentComfort = isSelected ? undefined : level as ComfortLevel}
+              >
+                {COMFORT_LABELS[level]}
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
+
+      <div class="dialog-actions">
+        <button class="btn primary" onclick={handleSaveMeta}>Save</button>
       </div>
     </div>
   {/if}
@@ -331,16 +409,16 @@
     border-style: dashed;
   }
   .label-main .move-card {
-    border-color: #d97706;
-    background: rgba(217, 119, 6, 0.08);
+    border-color: var(--label-main);
+    background: color-mix(in srgb, var(--label-main) 12%, transparent);
   }
   .label-alternative .move-card {
-    border-color: #2563eb;
-    background: rgba(37, 99, 235, 0.08);
+    border-color: var(--label-alt);
+    background: color-mix(in srgb, var(--label-alt) 12%, transparent);
   }
   .label-avoid .move-card {
-    border-color: #dc2626;
-    background: rgba(220, 38, 38, 0.08);
+    border-color: var(--label-avoid);
+    background: color-mix(in srgb, var(--label-avoid) 12%, transparent);
   }
   .drag-handle {
     display: flex; align-items: center; justify-content: center;
@@ -424,25 +502,38 @@
   }
   .btn-icon:hover { color: var(--text-h); background: var(--surface2); }
 
-  .marker-dialog {
+  .meta-dialog {
     border: 1px solid var(--border); border-radius: 8px; padding: 0;
-    background: var(--bg); color: var(--text); min-width: 260px;
+    background: var(--bg); color: var(--text); min-width: 280px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.2);
   }
-  .marker-dialog::backdrop { background: rgba(0,0,0,0.3); }
+  .meta-dialog::backdrop { background: rgba(0,0,0,0.3); }
+  .dialog-section { display: flex; flex-direction: column; gap: 0.375rem; }
+  .dialog-section + .dialog-section { margin-top: 0.75rem; }
+  .dialog-section-title {
+    font-size: 0.6875rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--muted); text-align: center;
+  }
   .marker-options {
     display: flex; flex-wrap: wrap; gap: 0.375rem; justify-content: center;
   }
-  .marker-btn {
-    padding: 0.5rem 0.75rem; border: 2px solid var(--border); border-radius: 6px;
+  .label-options, .comfort-options {
+    display: flex; flex-wrap: wrap; gap: 0.375rem; justify-content: center;
+  }
+  .meta-btn {
+    padding: 0.375rem 0.75rem; border: 2px solid var(--border); border-radius: 6px;
     background: var(--surface1); color: var(--text-h); cursor: pointer;
-    font-size: 1rem; font-weight: 600; font-family: inherit; min-width: 3rem;
+    font-size: 0.875rem; font-weight: 500; font-family: inherit;
     transition: all 0.1s;
   }
-  .marker-btn:hover { border-color: var(--accent); background: var(--surface2); }
-  .marker-btn.selected { border-color: var(--accent); background: var(--accent-bg); }
-  .marker-actions {
-    display: flex; gap: 0.5rem; justify-content: center; width: 100%; margin-top: 0.5rem;
+  .meta-btn:hover { border-color: var(--accent); background: var(--surface2); }
+  .meta-btn.selected { border-color: var(--accent); background: var(--accent-bg); }
+  .meta-btn.label-btn.selected { border-color: var(--label-main); background: var(--label-main); color: #fff; }
+  .meta-btn.label-btn.meta-btn-alt.selected { border-color: var(--label-alt); background: var(--label-alt); color: #fff; }
+  .meta-btn.label-btn.meta-btn-avoid.selected { border-color: var(--label-avoid); background: var(--label-avoid); color: #fff; }
+  .comfort-btn { font-size: 0.75rem; padding: 0.375rem 0.625rem; }
+  .dialog-actions {
+    display: flex; gap: 0.5rem; justify-content: center; width: 100%; margin-top: 0.75rem;
   }
   .btn {
     padding: 0.375rem 0.75rem; border: 1px solid var(--border); border-radius: 4px;

@@ -99,7 +99,6 @@
         onmouseenter={() => selectedIndex = i}
       >
         <span class="child-san">{child.san}{child.marker}</span>
-        <span class="child-label-dot" class:dot-main={child.label === 'main'} class:dot-alt={child.label === 'alternative'} class:dot-avoid={child.label === 'avoid'}></span>
         <ComfortBadge level={child.comfort} size={10} />
         {#if child.childName}
           <span class="child-name">{child.childName}</span>
@@ -133,17 +132,12 @@
   }
   .chooser-item:hover { background: var(--surface2); border-color: var(--accent); }
   .chooser-item.selected { background: var(--accent-bg); border-color: var(--accent); }
-  .chooser-item.label-main { border-left: 3px solid #d97706; }
-  .chooser-item.label-alternative { border-left: 3px solid #2563eb; }
-  .chooser-item.label-avoid { border-left: 3px solid #dc2626; }
+  .chooser-item.label-main { border-left: 3px solid var(--label-main); }
+  .chooser-item.label-alternative { border-left: 3px solid var(--label-alt); }
+  .chooser-item.label-avoid { border-left: 3px solid var(--label-avoid); }
   .child-san { font-weight: 600; color: var(--text-h); min-width: 2.5rem; }
   .child-name { font-size: 0.75rem; color: var(--accent); font-style: italic; }
-  .child-label-dot {
-    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-  }
-  .child-label-dot.dot-main { background: #d97706; }
-  .child-label-dot.dot-alt { background: #2563eb; }
-  .child-label-dot.dot-avoid { background: #dc2626; }
+
   .btn-icon {
     background: none; border: none; cursor: pointer; padding: 0.25rem;
     color: var(--muted); border-radius: 4px; display: flex;

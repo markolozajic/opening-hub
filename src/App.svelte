@@ -210,13 +210,6 @@
       <nav class="topbar-nav">
         <button
           class="topbar-btn"
-          class:active={currentPanel === 'edit'}
-          onclick={() => currentPanel = currentPanel === 'edit' ? 'main' : 'edit'}
-        >
-          Edit
-        </button>
-        <button
-          class="topbar-btn"
           class:active={currentPanel === 'search'}
           onclick={() => currentPanel = currentPanel === 'search' ? 'main' : 'search'}
         >

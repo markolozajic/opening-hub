@@ -1,47 +1,71 @@
-# Svelte + TS + Vite
+# Opening Hub
 
-This template should help get you started developing with Svelte and TypeScript in Vite.
+A client-side chess opening repertoire manager. Build and maintain your opening repertoires interactively — no server required.
 
-## Recommended IDE Setup
+## Features
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+- **Chess board** — click or drag pieces to make moves
+- **Dual repertoires** — manage separate White and Black repertoires side by side
+- **Position tree** — navigate through your repertoire with back/forward/root controls and a clickable move path
+- **Move labels** — mark moves as Main, Alternative, or Avoid to organize your lines
+- **Comfort levels** — rate positions from Easy to Struggling; comfort automatically propagates up from leaf positions
+- **Transposition detection** — when a move leads to an existing position, it's auto-detected and offered as a link
+- **Comments** — rich notes per position with Markdown support and internal links to other positions
+- **Links** — attach YouTube, Chessable, Lichess, or custom URLs per position
+- **PGN attachments** — store example games per position
+- **Move markers** — annotate moves with `!!`, `!`, `!?`, `?!`, `?`, `??`
+- **Drag-to-reorder** — reorder moves at any position
+- **Search** — search positions by name, comment, or FEN; filter by comfort level or leaf positions only
+- **Issues panel** — detects positions where a non-avoid line only has avoid children
+- **Import** — import from PGN or JSON backup
+- **Export** — export main line as PGN or full repertoire as JSON backup
+- **Cleanup** — find and remove positions no longer reachable from the root
+- **Fully client-side** — all data stored in IndexedDB via Dexie
 
-## Need an official Svelte framework?
+## Tech Stack
 
-Check out [SvelteKit](https://github.com/sveltejs/kit#readme), which is also powered by Vite. Deploy anywhere with its serverless-first approach and adapt to various platforms, with out of the box support for TypeScript, SCSS, and Less, and easily-added support for mdsvex, GraphQL, PostCSS, Tailwind CSS, and more.
+- [Svelte 5](https://svelte.dev/) with runes (`$state`, `$derived`, `$effect`)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Vite](https://vite.dev/)
+- [Dexie](https://dexie.org/) — IndexedDB wrapper for persistent storage
+- [chess.js](https://github.com/jhlywa/chess.js) — chess move validation and FEN/PGN handling
+- [marked](https://marked.js.org/) + [DOMPurify](https://github.com/cure53/DOMPurify) — comment rendering
+- [Lucide](https://lucide.dev/) — icons
+- [Vitest](https://vitest.dev/) — testing
 
-## Technical considerations
+## Getting Started
 
-**Why use this over SvelteKit?**
-
-- It brings its own routing solution which might not be preferable for some users.
-- It is first and foremost a framework that just happens to use Vite under the hood, not a Vite app.
-
-This template contains as little as possible to get started with Vite + TypeScript + Svelte, while taking into account the developer experience with regards to HMR and intellisense. It demonstrates capabilities on par with the other `create-vite` templates and is a good starting point for beginners dipping their toes into a Vite + Svelte project.
-
-Should you later need the extended capabilities and extensibility provided by SvelteKit, the template has been structured similarly to SvelteKit so that it is easy to migrate.
-
-**Why `global.d.ts` instead of `compilerOptions.types` inside `jsconfig.json` or `tsconfig.json`?**
-
-Setting `compilerOptions.types` shuts out all other types not explicitly listed in the configuration. Using triple-slash references keeps the default TypeScript setting of accepting type information from the entire workspace, while also adding `svelte` and `vite/client` type information.
-
-**Why include `.vscode/extensions.json`?**
-
-Other templates indirectly recommend extensions via the README, but this file allows VS Code to prompt the user to install the recommended extension upon opening the project.
-
-**Why enable `allowJs` in the TS template?**
-
-While `allowJs: false` would indeed prevent the use of `.js` files in the project, it does not prevent the use of JavaScript syntax in `.svelte` files. In addition, it would force `checkJs: false`, bringing the worst of both worlds: not being able to guarantee the entire codebase is TypeScript, and also having worse typechecking for the existing JavaScript. In addition, there are valid use cases in which a mixed codebase may be relevant.
-
-**Why is HMR not preserving my local component state?**
-
-HMR state preservation comes with a number of gotchas! It has been disabled by default in both `svelte-hmr` and `@sveltejs/vite-plugin-svelte` due to its often surprising behavior. You can read the details [here](https://github.com/rixo/svelte-hmr#svelte-hmr).
-
-If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR.
-
-```ts
-// store.ts
-// An extremely simple external store
-import { writable } from 'svelte/store'
-export default writable(0)
+```bash
+npm install
+npm run dev
 ```
+
+Open the URL shown in the terminal (default `http://localhost:5173`).
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build to `dist/` |
+| `npm run preview` | Preview production build |
+| `npm run check` | Type-check with `svelte-check` and `tsc` |
+| `npm test` | Run tests with Vitest |
+
+## Usage
+
+1. **Start** — the app opens at the starting position for White.
+2. **Make moves** — click a piece, then click a highlighted square, or drag a piece.
+3. **Navigate** — use the navigation bar (←, Home, →) or click positions in the move path below the board.
+4. **Switch sides** — toggle between White and Black repertoires.
+5. **Edit a position** — click Edit to name it, set comfort, add comments/links/games, and assign move labels.
+6. **Search** — find positions by name, comment, or FEN.
+7. **Import/Export** — bring in PGN games or export your repertoire as PGN or JSON.
+
+## Data Persistence
+
+All repertoire data is stored in your browser's IndexedDB. Nothing is sent to a server. To back up or transfer your repertoire, use the Export panel to download a JSON backup, and the Import panel to restore it.
+
+## License
+
+MIT
