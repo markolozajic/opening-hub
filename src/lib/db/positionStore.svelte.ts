@@ -141,6 +141,22 @@ export async function setComfortLevel(repertoire: Repertoire, fen: string, level
   await db.positions.put(toPlain(pos));
 }
 
+export async function setForcedDraw(repertoire: Repertoire, fen: string, value: boolean): Promise<void> {
+  const pos = getPosition(repertoire, fen);
+  if (!pos) return;
+  pos.forcedDraw = value || undefined;
+  pos.updatedAt = Date.now();
+  await db.positions.put(toPlain(pos));
+}
+
+export async function setPracticalDraw(repertoire: Repertoire, fen: string, value: boolean): Promise<void> {
+  const pos = getPosition(repertoire, fen);
+  if (!pos) return;
+  pos.practicalDraw = value || undefined;
+  pos.updatedAt = Date.now();
+  await db.positions.put(toPlain(pos));
+}
+
 export async function setPositionName(repertoire: Repertoire, fen: string, name: string | undefined): Promise<void> {
   const pos = getPosition(repertoire, fen);
   if (!pos) return;

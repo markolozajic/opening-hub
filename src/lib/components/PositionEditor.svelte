@@ -1,9 +1,10 @@
 <script lang="ts">
   import type { Position, ComfortLevel, Link, PgnAttachment, Repertoire } from '../types';
   import { nav } from '../state/navigation.svelte';
-  import { setPositionName, setPositionComment, setComfortLevel, addLink, removeLink, addPgnAttachment, removePgnAttachment, getPosition, updateLink } from '../db/positionStore.svelte';
+  import { setPositionName, setPositionComment, setComfortLevel, setForcedDraw, setPracticalDraw, addLink, removeLink, addPgnAttachment, removePgnAttachment, getPosition, updateLink } from '../db/positionStore.svelte';
   import { getNovelty } from '../state/novelty.svelte';
   import { invalidateComfortCache } from '../state/comfort.svelte';
+  import { invalidateDrawCounts } from '../state/drawCounts.svelte';
   import { COMFORT_COLORS, COMFORT_LABELS } from '../constants';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import LinkList from './LinkList.svelte';
@@ -21,6 +22,8 @@
   let name = $state('');
   let comment = $state('');
   let comfort = $state<ComfortLevel | undefined>(undefined);
+  let forcedDraw = $state(false);
+  let practicalDraw = $state(false);
   let previewMode = $state(false);
   let saving = $state(false);
 
@@ -64,11 +67,15 @@
       name: p.name ?? '',
       comment: p.comment ?? '',
       comfort: p.comfortLevel,
+      forcedDraw: p.forcedDraw ?? false,
+      practicalDraw: p.practicalDraw ?? false,
     } : null);
     if (data) {
       name = data.name;
       comment = data.comment;
       comfort = data.comfort;
+      forcedDraw = data.forcedDraw;
+      practicalDraw = data.practicalDraw;
     }
   });
 
@@ -104,6 +111,9 @@
     await setPositionComment(r, f, comment || undefined);
     await setComfortLevel(r, f, comfort);
     invalidateComfortCache(r, f);
+    await setForcedDraw(r, f, forcedDraw);
+    await setPracticalDraw(r, f, practicalDraw);
+    invalidateDrawCounts(r);
     saving = false;
     onClose?.();
   }
@@ -189,6 +199,27 @@
           {#if comfort}
             <button class="clear-comfort" onclick={() => comfort = undefined}>Clear</button>
           {/if}
+        </div>
+      </div>
+      <div class="field">
+        <span class="label">Position Drawn?</span>
+        <div class="comfort-options">
+          <button
+            class="comfort-btn"
+            class:selected={forcedDraw}
+            class:draw-selected={forcedDraw}
+            onclick={() => { forcedDraw = !forcedDraw; practicalDraw = false; }}
+          >
+            By Force
+          </button>
+          <button
+            class="comfort-btn"
+            class:selected={practicalDraw}
+            class:draw-selected={practicalDraw}
+            onclick={() => { practicalDraw = !practicalDraw; forcedDraw = false; }}
+          >
+            Practically
+          </button>
         </div>
       </div>
     {/if}
@@ -282,6 +313,11 @@
     transition: all 0.15s;
   }
   .comfort-btn:hover { opacity: 0.85; }
+  .comfort-btn.draw-selected {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
   .clear-comfort {
     background: none; border: none; cursor: pointer; font-size: 0.75rem;
     color: var(--muted); padding: 0.25rem; font-family: inherit;

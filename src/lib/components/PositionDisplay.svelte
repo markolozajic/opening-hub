@@ -5,6 +5,7 @@
   import { getComfort } from '../state/comfort.svelte';
   import { getNovelty } from '../state/novelty.svelte';
   import { pgnView } from '../state/pgnView.svelte';
+  import { getDrawCounts } from '../state/drawCounts.svelte';
   import ComfortBadge from './ComfortBadge.svelte';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import LinkList from './LinkList.svelte';
@@ -21,6 +22,7 @@
   let comfort = $derived(fen ? getComfort(nav.activeRepertoire, fen) : null);
   let turn = $derived(position ? getSideLabel(position.fen.split(' ')[1] as 'w' | 'b' || 'w') : '');
   let isNovel = $derived(fen ? getNovelty(nav.activeRepertoire, fen) : false);
+  let drawCounts = $derived(fen ? getDrawCounts(nav.activeRepertoire, fen) : { forced: 0, practical: 0 });
 </script>
 
 {#if pgnView.active}
@@ -45,6 +47,11 @@
         <span class="sep">·</span>
         <span class="turn">{turn}</span>
       </div>
+    </div>
+
+    <div class="section">
+      <p class="draw-info forced">Forced draws from this position: {drawCounts.forced}</p>
+      <p class="draw-info practical">Practical draws from this position: {drawCounts.practical}</p>
     </div>
 
     {#if position.comment}
@@ -99,6 +106,9 @@
     letter-spacing: 0.05em; color: var(--muted);
   }
   .empty { color: var(--muted); font-style: italic; font-size: 0.8125rem; }
+  .draw-info { margin: 0; font-size: 0.8125rem; line-height: 1.5; }
+  .draw-info.forced { color: #ef4444; }
+  .draw-info.practical { color: #ca8a04; }
   .btn-icon {
     background: none; border: none; cursor: pointer; padding: 0.25rem;
     color: var(--muted); border-radius: 4px; display: flex;

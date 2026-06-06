@@ -1,11 +1,12 @@
 <script lang="ts">
   import { nav } from '../state/navigation.svelte';
   import { labelData } from '../state/labels.svelte';
-  import { getPosition, setMoveMarker, setMoveLabel, setComfortLevel, setMoveOrder } from '../db/positionStore.svelte';
+  import { getPosition, setMoveMarker, setMoveLabel, setComfortLevel, setForcedDraw, setPracticalDraw, setMoveOrder } from '../db/positionStore.svelte';
   import { findMoveNumber, findAllTranspositionPaths } from '../utils/positionQueries';
   import type { MovePathStep, MoveMarker, ComfortLevel, MoveLabel } from '../types';
   import { COMFORT_COLORS, COMFORT_LABELS, MOVE_LABELS } from '../constants';
   import { getComfort, invalidateComfortCache } from '../state/comfort.svelte';
+  import { getDrawCounts, invalidateDrawCounts } from '../state/drawCounts.svelte';
   import { getNovelty } from '../state/novelty.svelte';
   import { getTurn } from '../utils/fen';
   import { sortMoves, formatNumberedSan } from '../utils/positionUtils';
@@ -25,16 +26,21 @@
 
   let moves = $derived(
     position
-      ? Object.entries(position.moves).map(([san, edge]) => ({
-          san,
-          toFen: edge.toFen,
-          comment: edge.comment,
-          autoDetected: edge.autoDetected,
-          label: labelData.moveLabels[nav.currentFen]?.[san],
-          marker: edge.marker,
-          childPos: getPosition(nav.activeRepertoire, edge.toFen),
-          comfort: getComfort(nav.activeRepertoire, edge.toFen),
-        }))
+      ? Object.entries(position.moves).map(([san, edge]) => {
+          const dc = getDrawCounts(nav.activeRepertoire, edge.toFen);
+          return {
+            san,
+            toFen: edge.toFen,
+            comment: edge.comment,
+            autoDetected: edge.autoDetected,
+            label: labelData.moveLabels[nav.currentFen]?.[san],
+            marker: edge.marker,
+            childPos: getPosition(nav.activeRepertoire, edge.toFen),
+            comfort: getComfort(nav.activeRepertoire, edge.toFen),
+            forcedDraws: dc.forced,
+            practicalDraws: dc.practical,
+          };
+        })
       : []
   );
 
@@ -137,6 +143,8 @@
   let editCurrentMarker = $state<MoveMarker | undefined>(undefined);
   let editCurrentLabel = $state<MoveLabel | undefined>(undefined);
   let editCurrentComfort = $state<ComfortLevel | undefined>(undefined);
+  let editCurrentForcedDraw = $state(false);
+  let editCurrentPracticalDraw = $state(false);
   let editToFen = $state<string>('');
   let editIsLeaf = $state(false);
   let editShowLabel = $state(false);
@@ -162,6 +170,8 @@
     const childPos = getPosition(nav.activeRepertoire, edge.toFen);
     editIsLeaf = childPos ? Object.keys(childPos.moves).length === 0 : false;
     editCurrentComfort = childPos?.comfortLevel;
+    editCurrentForcedDraw = childPos?.forcedDraw ?? false;
+    editCurrentPracticalDraw = childPos?.practicalDraw ?? false;
     editShowLabel = ourTurn && moveCount > 1;
   }
 
@@ -180,6 +190,9 @@
     if (editIsLeaf && editToFen) {
       await setComfortLevel(rep, editToFen, editCurrentComfort);
       invalidateComfortCache(rep, editToFen);
+      await setForcedDraw(rep, editToFen, editCurrentForcedDraw);
+      await setPracticalDraw(rep, editToFen, editCurrentPracticalDraw);
+      invalidateDrawCounts(rep);
     }
 
     closeMetaDialog();
@@ -190,6 +203,8 @@
     editCurrentMarker = undefined;
     editCurrentLabel = undefined;
     editCurrentComfort = undefined;
+    editCurrentForcedDraw = false;
+    editCurrentPracticalDraw = false;
     editToFen = '';
     editIsLeaf = false;
     editShowLabel = false;
@@ -236,9 +251,15 @@
           {/if}
           <button class="move-card" onclick={() => handleNavigate(move.toFen, move.san, move.autoDetected)}>
             <div class="move-header">
-              <span class="move-san">{move.displaySan}</span>
-              {#if move.marker}<span class="move-marker" class:move-marker-novelty={move.marker === 'N'}>{move.marker}</span>{/if}
-              <ComfortBadge level={move.comfort} size={8} />
+              <div class="draw-indicator">
+                <span class="draw-symbol">&#189;</span>
+                <span class="draw-counts"><span class="draw-count forced">{move.forcedDraws}</span>/<span class="draw-count practical">{move.practicalDraws}</span></span>
+              </div>
+              <div class="move-info">
+                <span class="move-san">{move.displaySan}</span>
+                {#if move.marker}<span class="move-marker" class:move-marker-novelty={move.marker === 'N'}>{move.marker}</span>{/if}
+                <ComfortBadge level={move.comfort} size={8} />
+              </div>
             </div>
             <MiniBoard fen={move.toFen} flipped={isFlipped} size={100} />
             {#if move.comment}
@@ -397,6 +418,25 @@
             {/each}
           </div>
         </div>
+        <div class="dialog-section">
+          <span class="dialog-section-title">Position Drawn?</span>
+          <div class="draw-toggle-options">
+            <button
+              class="meta-btn draw-toggle-btn"
+              class:selected={editCurrentForcedDraw}
+              onclick={() => { editCurrentForcedDraw = !editCurrentForcedDraw; editCurrentPracticalDraw = false; }}
+            >
+              By Force
+            </button>
+            <button
+              class="meta-btn draw-toggle-btn"
+              class:selected={editCurrentPracticalDraw}
+              onclick={() => { editCurrentPracticalDraw = !editCurrentPracticalDraw; editCurrentForcedDraw = false; }}
+            >
+              Practically
+            </button>
+          </div>
+        </div>
       {/if}
 
       <div class="dialog-actions">
@@ -479,12 +519,76 @@
   }
   .action-btn:hover { color: var(--accent); border-color: var(--accent); }
   .action-btn:last-child:hover { color: var(--danger, #ef4444); border-color: var(--danger, #ef4444); }
-  .move-header { display: flex; align-items: center; gap: 0.375rem; }
+  .move-header {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .move-header .draw-indicator {
+    position: absolute;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.1;
+  }
+
+  .move-header .draw-symbol {
+    font-size: 0.625rem;
+    font-weight: 700;
+    color: var(--text-h);
+  }
+
+  .move-header .draw-counts {
+    font-size: 0.6875rem;
+    display: flex;
+    gap: 0;
+  }
+
+  .move-header .draw-count.forced {
+    color: #ef4444;
+    font-weight: 700;
+  }
+
+  .move-header .draw-count.practical {
+    color: #ca8a04;
+    font-weight: 700;
+  }
+
+  .move-info {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
   .move-san { font-weight: 600; font-size: 0.9375rem; color: var(--text-h); }
   .move-marker { font-weight: 600; font-size: 0.9375rem; color: var(--accent); }
   .move-marker-novelty { color: #14b8a6; }
   .move-comment { font-size: 0.6875rem; color: var(--text); line-height: 1.3; }
   .child-name { font-size: 0.6875rem; color: var(--accent); font-style: italic; }
+
+  .draw-toggle-options {
+    display: flex;
+    gap: 0.375rem;
+    justify-content: center;
+  }
+
+  .draw-toggle-btn {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.625rem;
+  }
+
+  .draw-toggle-btn.selected {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
 
   .transposition-dialog {
     border: 1px solid var(--border); border-radius: 8px; padding: 0;

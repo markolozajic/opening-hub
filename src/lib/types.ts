@@ -35,6 +35,8 @@ export interface Position {
   dismissedTranspositions?: string[];
   comment?: string;
   comfortLevel?: ComfortLevel;
+  forcedDraw?: boolean;
+  practicalDraw?: boolean;
   moves: Record<string, MoveEdge>;
   links: Link[];
   pgnAttachments: PgnAttachment[];
