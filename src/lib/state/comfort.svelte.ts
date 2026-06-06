@@ -2,6 +2,7 @@ import type { ComfortLevel, Repertoire } from '../types';
 import { getPosition } from '../db/positionStore.svelte';
 import { getTurn } from '../utils/fen';
 import { COMFORT_SEVERITY } from '../constants';
+import { labelData } from './labels.svelte';
 
 const comfortCache: Record<string, ComfortLevel | null> = {};
 
@@ -11,41 +12,45 @@ function fromPriority(p: number): ComfortLevel | null {
   return p >= 0 && p < PRIORITY_ORDER.length ? PRIORITY_ORDER[p] : null;
 }
 
-function visibleChildren(pos: { moves: Record<string, { toFen: string; label?: string }> }, fen: string, ourSide: string): string[] {
-  const children: string[] = [];
-  for (const [san, edge] of Object.entries(pos.moves)) {
-    const turn = getTurn(fen);
-    if (turn === ourSide && (edge.label === 'alternative' || edge.label === 'avoid')) continue;
-    children.push(edge.toFen);
-  }
-  return children;
-}
-
-function collectLeafComforts(repertoire: Repertoire, fen: string, ourSide: string, visited: Set<string>): number[] {
-  if (visited.has(fen)) return [];
+function aggregateComfort(
+  repertoire: Repertoire,
+  fen: string,
+  ourSide: string,
+  visited: Set<string>,
+  isMainLine: boolean,
+): number | null {
+  if (visited.has(fen)) return null;
   visited.add(fen);
 
   const pos = getPosition(repertoire, fen);
-  if (!pos) return [];
+  if (!pos) return null;
 
-  const children = visibleChildren(pos, fen, ourSide);
+  const turn = getTurn(fen);
 
-  if (children.length === 0) {
-    return pos.comfortLevel != null ? [COMFORT_SEVERITY[pos.comfortLevel]] : [];
+  const childValues: number[] = [];
+  for (const [, edge] of Object.entries(pos.moves)) {
+    if (edge.label === 'avoid') continue;
+    if (turn === ourSide && isMainLine && edge.label === 'alternative') continue;
+
+    const childIsMain = edge.label !== 'alternative';
+    const val = aggregateComfort(repertoire, edge.toFen, ourSide, visited, childIsMain);
+    if (val !== null) childValues.push(val);
   }
 
-  const results: number[] = [];
-  for (const child of children) {
-    results.push(...collectLeafComforts(repertoire, child, ourSide, visited));
+  if (childValues.length > 0) {
+    return turn === ourSide ? Math.min(...childValues) : Math.max(...childValues);
   }
-  return results;
+
+  return pos.comfortLevel != null ? COMFORT_SEVERITY[pos.comfortLevel] : null;
 }
 
 function computeComfortFor(repertoire: Repertoire, fen: string): ComfortLevel | null {
   const ourSide = repertoire === 'white' ? 'w' : 'b';
-  const leafValues = collectLeafComforts(repertoire, fen, ourSide, new Set());
-  if (leafValues.length === 0) return null;
-  return fromPriority(Math.max(...leafValues));
+  const posLabel = labelData.positionLabels[fen];
+  const isMainLine = posLabel !== 'alternative';
+  const severity = aggregateComfort(repertoire, fen, ourSide, new Set(), isMainLine);
+  if (severity === null) return null;
+  return fromPriority(severity);
 }
 
 export function getComfort(repertoire: Repertoire, fen: string): ComfortLevel | null {

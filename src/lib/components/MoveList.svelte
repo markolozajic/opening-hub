@@ -150,6 +150,14 @@
   let editShowLabel = $state(false);
   let metaDialogRef = $state<HTMLDialogElement | null>(null);
 
+  let availableLabels = $derived.by(() => {
+    if (!editShowLabel) return [];
+    const lbl = labelData.positionLabels[nav.currentFen];
+    if (lbl === 'avoid') return ['avoid'] as MoveLabel[];
+    if (lbl === 'alternative') return ['alternative', 'avoid'] as MoveLabel[];
+    return ['main', 'alternative', 'avoid'] as MoveLabel[];
+  });
+
   let ourTurn = $derived(getTurn(nav.currentFen) === (nav.activeRepertoire === 'white' ? 'w' : 'b'));
   let moveCount = $derived(position ? Object.keys(position.moves).length : 0);
   let isCurrentPositionNovel = $derived(getNovelty(nav.activeRepertoire, nav.currentFen));
@@ -357,7 +365,7 @@
         <div class="dialog-section">
           <span class="dialog-section-title">Label</span>
           <div class="label-options">
-            {#each ['main', 'alternative', 'avoid'] as l}
+            {#each availableLabels as l}
               {@const isSelected = editCurrentLabel === l}
               <button
                 class="meta-btn label-btn"
