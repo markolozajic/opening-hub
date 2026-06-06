@@ -5,7 +5,7 @@
   import { findMoveNumber, findAllTranspositionPaths } from '../utils/positionQueries';
   import type { MovePathStep, MoveMarker, ComfortLevel, MoveLabel } from '../types';
   import { COMFORT_COLORS, COMFORT_LABELS, MOVE_LABELS } from '../constants';
-  import { getComfort } from '../state/comfort.svelte';
+  import { getComfort, invalidateComfortCache } from '../state/comfort.svelte';
   import { getNovelty } from '../state/novelty.svelte';
   import { getTurn } from '../utils/fen';
   import { sortMoves, formatNumberedSan } from '../utils/positionUtils';
@@ -179,6 +179,7 @@
 
     if (editIsLeaf && editToFen) {
       await setComfortLevel(rep, editToFen, editCurrentComfort);
+      invalidateComfortCache(rep, editToFen);
     }
 
     closeMetaDialog();
