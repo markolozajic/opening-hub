@@ -37,7 +37,7 @@
       label: labelData.moveLabels[nav.currentFen]?.[san],
       marker: edge.marker,
     }));
-    return sortMoves(pos.moveOrder, raw);
+    return sortMoves(pos.moveOrder, raw, nav.sortMode);
   }
 
   function handleBackdropClick(e: MouseEvent) {
