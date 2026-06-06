@@ -291,7 +291,7 @@
           fen={displayFen}
           selectedSquare={selectedSquare}
           highlightedSquares={highlightedSquares}
-          interactive={!pgnView.active && currentPanel === 'main'}
+          interactive={!pgnView.active}
           flipped={isFlipped}
           size={boardWidth - 32}
           onSquareClick={handleSquareClick}
