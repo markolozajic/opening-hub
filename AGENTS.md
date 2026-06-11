@@ -14,7 +14,7 @@ Chess opening repertoire manager — fully **client-side SPA** (no server). Buil
 ## Key Directories
 - `src/lib/components/` — 17 Svelte components (ChessBoard, MoveList, PositionEditor, etc.)
 - `src/lib/db/` — IndexedDB schema (`schema.ts`), CRUD store (`positionStore.svelte.ts`), migrations
-- `src/lib/state/` — Reactive state: `navigation.svelte.ts`, `comfort.svelte.ts`, `labels.svelte.ts`
+- `src/lib/state/` — Reactive state: `navigation.svelte.ts`, `comfort.svelte.ts`, `labels.svelte.ts`, `preparation.svelte.ts`
 - `src/lib/chess/` — Board rendering & chess.js wrappers
 - `src/lib/utils/` — FEN/PGN helpers, position queries, utilities
 - `src/tests/` — 6 vitest test files (helpers, comfort, detection, labels, navigation, positionQueries, store)
@@ -28,13 +28,14 @@ App.svelte (currentPanel switches views)
   ├── NavBar (repertoire tabs, back/forward)
   ├── ChessBoard (SVG, click/drag)
   ├── MoveList (sidebar, drag-reorder, labels)
-  └── Panels: PositionDisplay | PositionEditor | SearchView | ImportPanel | ExportPanel | CleanupPanel | IssuesPanel
+  └── Panels: PositionDisplay | PositionEditor | SearchView | ImportPanel | ExportPanel | CleanupPanel | IssuesPanel | PreparationPanel
 ```
 - **Panel routing**: `currentPanel` state (no URL router)
 - **Navigation**: `nav` object with back/forward stacks + tree fallback
 - **Comfort propagation**: leaves → root (worst wins, filtered by main-line on our turn)
 - **Label propagation**: root → leaves (BFS, dominance rules: main > alternative, avoid > all)
 - **Auto-transposition**: detected on addMove, must be confirmed/dismissed
+- **Preparation (player filter)**: `PreparationRecord` stored in Dexie `preparation` table keyed by `[repertoire+player]`, each containing `taggedFens: string[]`. `tagPosition()` tags a FEN for a player along with all non-`everybody` ancestors on `nav.currentPath`. `untagPosition()` cascades to all descendants. `getPlayersAt()` returns `{ name, certain }[]` — `certain: true` for direct tags, `false` when found via `getAncestors()` (descendant propagation, shown with `?` in UI). All players taggable at any position. "Played by: everybody" hardcoded at root and after first White move, controlled by `isEverybodyPly()`. `nextSansForPath()` handles player filter narrowing — null = show all, [] = outside repertoire, SANs = show only those.
 
 ## Testing
 Vitest + jsdom, `vi.mock()` for isolation, `fake-indexeddb` for store tests. Factories in `tests/helpers.ts`.

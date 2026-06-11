@@ -44,6 +44,12 @@ export interface Position {
   updatedAt: number;
 }
 
+export interface PreparationRecord {
+  repertoire: Repertoire;
+  player: string;
+  taggedFens: string[];
+}
+
 export interface VerboseMove {
   from: string;
   to: string;

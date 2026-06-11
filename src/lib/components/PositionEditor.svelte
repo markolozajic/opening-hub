@@ -5,6 +5,7 @@
   import { getNovelty } from '../state/novelty.svelte';
   import { invalidateComfortCache } from '../state/comfort.svelte';
   import { invalidateDrawCounts } from '../state/drawCounts.svelte';
+  import { getPlayers, tagPosition, untagPosition, getDirectlyTaggedPlayers, formatPlayerName } from '../state/preparation.svelte';
   import { COMFORT_COLORS, COMFORT_LABELS } from '../constants';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import LinkList from './LinkList.svelte';
@@ -26,6 +27,19 @@
   let practicalDraw = $state(false);
   let previewMode = $state(false);
   let saving = $state(false);
+
+  let tagPlayer = $state('');
+  let taggablePlayers = $derived(position ? getPlayers() : []);
+  let turn = $derived(position ? position.fen.split(' ')[1] as 'w' | 'b' || 'w' : 'w');
+  let isOurTurn = $derived(
+    position && ((nav.activeRepertoire === 'white' && turn === 'w') || (nav.activeRepertoire === 'black' && turn === 'b'))
+  );
+  let taggedAtPosition = $derived(
+    position && isOurTurn
+      ? getDirectlyTaggedPlayers(nav.activeRepertoire, position.fen)
+          .map(p => ({ name: p }))
+      : []
+  );
 
   let isNovel = $derived(position ? getNovelty(nav.activeRepertoire, position.fen) : false);
 
@@ -118,6 +132,17 @@
     onClose?.();
   }
 
+  async function handleTagPosition() {
+    if (!position || !tagPlayer.trim()) return;
+    await tagPosition(nav.activeRepertoire, position.fen, tagPlayer.trim());
+    tagPlayer = '';
+  }
+
+  async function handleUntagPosition(playerName: string) {
+    if (!position) return;
+    await untagPosition(nav.activeRepertoire, position.fen, playerName);
+  }
+
   async function handleAddLink(link: Link) {
     if (!position) return;
     await addLink(position.repertoire, position.fen, link);
@@ -178,6 +203,39 @@
         placeholder="e.g. Sicilian, Grand Prix, Left Hook"
       />
     </div>
+
+    {#if isOurTurn}
+      <div class="field">
+        <span class="label">Tag position</span>
+        <div class="tag-section">
+          <div class="tag-row">
+            <input
+              bind:value={tagPlayer}
+              class="input"
+              placeholder="Player name…"
+              list="tag-players"
+              onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleTagPosition(); } }}
+            />
+            <datalist id="tag-players">
+              {#each taggablePlayers as p}
+                <option value={p}></option>
+              {/each}
+            </datalist>
+            <button class="btn" onclick={handleTagPosition} disabled={!tagPlayer.trim()}>Tag</button>
+          </div>
+          {#if taggedAtPosition.length > 0}
+            <div class="tagged-list">
+              {#each taggedAtPosition as entry}
+                <div class="tagged-item">
+                  <span class="tagged-name">{formatPlayerName(entry.name)}</span>
+                  <button class="btn small-btn" onclick={() => handleUntagPosition(entry.name)}>Untag</button>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      </div>
+    {/if}
 
     {#if Object.keys(position.moves).length === 0}
       <div class="field">
@@ -332,4 +390,19 @@
   .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   .btn.primary:hover { opacity: 0.9; }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .tag-section { display: flex; flex-direction: column; gap: 0.375rem; }
+  .tag-row { display: flex; gap: 0.25rem; }
+  .tag-row .input { flex: 1; padding: 0.375rem; font-size: 0.8125rem; }
+  .tagged-list { display: flex; flex-direction: column; gap: 0.25rem; }
+  .tagged-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.25rem 0.375rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--surface1); font-size: 0.8125rem;
+  }
+  .tagged-name { color: var(--text-h); font-weight: 500; }
+  .small-btn {
+    padding: 0.125rem 0.5rem; border: 1px solid var(--border); border-radius: 3px;
+    background: var(--surface2); color: var(--muted); cursor: pointer; font-family: inherit; font-size: 0.75rem;
+  }
+  .small-btn:hover { color: var(--danger); border-color: var(--danger); }
 </style>

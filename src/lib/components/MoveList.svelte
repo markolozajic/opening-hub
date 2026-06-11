@@ -13,6 +13,7 @@
   import MiniBoard from './MiniBoard.svelte';
   import ComfortBadge from './ComfortBadge.svelte';
   import { navigateTo, navigatePath } from '../state/navigation.svelte';
+  import { prepState, nextSansForPath, selectPlayer, formatPlayerName, tagPosition, untagPosition, getPlayers, getDirectlyTaggedPlayers } from '../state/preparation.svelte';
   import { Trash2, GripVertical, Eye, X, Pencil } from '@lucide/svelte';
 
   let {
@@ -24,23 +25,35 @@
   let isFlipped = $derived(nav.activeRepertoire === 'black');
   let position = $derived(getPosition(nav.activeRepertoire, nav.currentFen));
 
+  let allowedSans = $derived(
+    prepState.selectedPlayer
+      ? nextSansForPath(nav.activeRepertoire, nav.currentPath.map(s => s.san), prepState.selectedPlayer)
+      : null
+  );
+
   let moves = $derived(
     position
-      ? Object.entries(position.moves).map(([san, edge]) => {
-          const dc = getDrawCounts(nav.activeRepertoire, edge.toFen);
-          return {
-            san,
-            toFen: edge.toFen,
-            comment: edge.comment,
-            autoDetected: edge.autoDetected,
-            label: labelData.moveLabels[nav.currentFen]?.[san],
-            marker: edge.marker,
-            childPos: getPosition(nav.activeRepertoire, edge.toFen),
-            comfort: getComfort(nav.activeRepertoire, edge.toFen),
-            forcedDraws: dc.forced,
-            practicalDraws: dc.practical,
-          };
-        })
+      ? Object.entries(position.moves)
+          .filter(([san, edge]) => {
+            if (allowedSans === null) return true;
+            if (allowedSans.length === 0) return false;
+            return allowedSans.includes(san);
+          })
+          .map(([san, edge]) => {
+            const dc = getDrawCounts(nav.activeRepertoire, edge.toFen);
+            return {
+              san,
+              toFen: edge.toFen,
+              comment: edge.comment,
+              autoDetected: edge.autoDetected,
+              label: labelData.moveLabels[nav.currentFen]?.[san],
+              marker: edge.marker,
+              childPos: getPosition(nav.activeRepertoire, edge.toFen),
+              comfort: getComfort(nav.activeRepertoire, edge.toFen),
+              forcedDraws: dc.forced,
+              practicalDraws: dc.practical,
+            };
+          })
       : []
   );
 
@@ -149,6 +162,11 @@
   let editIsLeaf = $state(false);
   let editShowLabel = $state(false);
   let metaDialogRef = $state<HTMLDialogElement | null>(null);
+  let metaTagPlayer = $state('');
+  let metaTaggablePlayers = $derived(editToFen ? getPlayers() : []);
+  let metaTaggedAtPosition = $derived(
+    editToFen ? getDirectlyTaggedPlayers(nav.activeRepertoire, editToFen) : []
+  );
 
   let availableLabels = $derived.by(() => {
     if (!editShowLabel) return [];
@@ -222,17 +240,38 @@
   function handleToggleSortMode() {
     nav.sortMode = sortMode === 'comfort' ? 'manual' : 'comfort';
   }
+
+  async function handleMetaTag() {
+    if (!metaTagPlayer.trim() || !editToFen) return;
+    await tagPosition(nav.activeRepertoire, editToFen, metaTagPlayer.trim());
+    metaTagPlayer = '';
+  }
+
+  async function handleMetaUntag(player: string) {
+    if (!editToFen) return;
+    await untagPosition(nav.activeRepertoire, editToFen, player);
+  }
 </script>
 
 <div class="move-list">
+  {#if prepState.selectedPlayer}
+    <div class="player-filter-banner">
+      <span class="player-filter-label">PLAYER FILTER: {formatPlayerName(prepState.selectedPlayer)}</span>
+      <button class="banner-clear-btn" onclick={() => selectPlayer(null)} title="Clear player filter">
+        <X size={12} /> Clear
+      </button>
+    </div>
+  {/if}
   <div class="title-row">
     <h3 class="title">Moves</h3>
-    <button class="sort-toggle" onclick={handleToggleSortMode} title={sortMode === 'comfort' ? 'Switch to manual order' : 'Switch to comfort order'}>
-      {sortMode === 'comfort' ? 'Active: Comfort order' : 'Active: Manual order'}
-    </button>
+    <div class="title-actions">
+      <button class="sort-toggle" onclick={handleToggleSortMode} title={sortMode === 'comfort' ? 'Switch to manual order' : 'Switch to comfort order'}>
+        {sortMode === 'comfort' ? 'Active: Comfort order' : 'Active: Manual order'}
+      </button>
+    </div>
   </div>
   {#if sortedMoves.length === 0}
-    <p class="empty">No moves added yet. Click a piece on the board.</p>
+    <p class="empty">{prepState.selectedPlayer ? `No moves by ${formatPlayerName(prepState.selectedPlayer)} at this position.` : 'No moves added yet. Click a piece on the board.'}</p>
   {:else}
     <div class="moves" role="list">
       {#each numberedMoves as move, i}
@@ -382,6 +421,37 @@
         </div>
       {/if}
 
+      {#if !ourTurn && editToFen}
+        <div class="dialog-section">
+          <span class="dialog-section-title">Tag position</span>
+          <div class="tag-row-centered">
+            <input
+              bind:value={metaTagPlayer}
+              class="meta-input"
+              placeholder="Player…"
+              list="meta-tag-players"
+              onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleMetaTag(); } }}
+            />
+            <datalist id="meta-tag-players">
+              {#each metaTaggablePlayers as p}
+                <option value={p}></option>
+              {/each}
+            </datalist>
+            <button class="meta-btn" onclick={handleMetaTag} disabled={!metaTagPlayer.trim()}>Tag</button>
+          </div>
+          {#if metaTaggedAtPosition.length > 0}
+            <div class="meta-tagged-list">
+              {#each metaTaggedAtPosition as p}
+                <span class="meta-tag-item">
+                  {formatPlayerName(p)}
+                  <button class="meta-untag-btn" onclick={() => handleMetaUntag(p)}>x</button>
+                </span>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/if}
+
       <div class="dialog-section">
         <span class="dialog-section-title">Marker</span>
         <div class="marker-options">
@@ -461,6 +531,22 @@
   }
   .title-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
   .title { margin: 0; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .title-actions { display: flex; align-items: center; gap: 0.25rem; }
+  .player-filter-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.375rem 0.5rem; border-radius: 4px; background: var(--accent-bg);
+    border: 1px solid var(--accent);
+  }
+  .player-filter-label {
+    font-size: 0.75rem; font-weight: 600; color: var(--accent);
+  }
+  .banner-clear-btn {
+    display: inline-flex; align-items: center; gap: 0.125rem;
+    font-size: 0.625rem; padding: 0.125rem 0.375rem; border: 1px solid var(--accent);
+    border-radius: 4px; background: transparent; color: var(--accent); cursor: pointer;
+    font-family: inherit; white-space: nowrap;
+  }
+  .banner-clear-btn:hover { background: var(--accent); color: #fff; }
   .sort-toggle {
     font-size: 0.625rem; padding: 0.125rem 0.375rem; border: 1px solid var(--border);
     border-radius: 4px; background: var(--surface1); color: var(--muted); cursor: pointer;
@@ -680,6 +766,27 @@
   .meta-btn.label-btn.meta-btn-alt.selected { border-color: var(--label-alt); background: var(--label-alt); color: #fff; }
   .meta-btn.label-btn.meta-btn-avoid.selected { border-color: var(--label-avoid); background: var(--label-avoid); color: #fff; }
   .comfort-btn { font-size: 0.75rem; padding: 0.375rem 0.625rem; }
+  .tag-row-centered {
+    display: flex; gap: 0.25rem; justify-content: center; align-items: center;
+  }
+  .meta-input {
+    flex: 1; padding: 0.375rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--bg); color: var(--text-h); font-size: 0.8125rem; font-family: inherit;
+    box-sizing: border-box; max-width: 140px;
+  }
+  .meta-tagged-list {
+    display: flex; flex-wrap: wrap; gap: 0.25rem; justify-content: center; margin-top: 0.25rem;
+  }
+  .meta-tag-item {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    padding: 0.125rem 0.375rem; border: 1px solid var(--border); border-radius: 3px;
+    background: var(--surface2); font-size: 0.75rem; color: var(--text-h);
+  }
+  .meta-untag-btn {
+    border: none; background: none; cursor: pointer; padding: 0;
+    font-size: 0.75rem; color: var(--muted); line-height: 1;
+  }
+  .meta-untag-btn:hover { color: var(--danger); }
   .dialog-actions {
     display: flex; gap: 0.5rem; justify-content: center; width: 100%; margin-top: 0.75rem;
   }

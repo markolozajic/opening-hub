@@ -9,6 +9,7 @@ Build, organize, and study your chess opening repertoire.
 - **Edit details** — click the edit button to rename a position, add notes, links, or example games
 - **Navigate** — use the arrow buttons or click a move in the move list
 - **Organize** — assign comfort levels and move labels to track your progress
+- **Prepare** — tag players at positions to track who plays what
 
 ## Features
 
@@ -16,6 +17,7 @@ Build, organize, and study your chess opening repertoire.
 - Import and export PGN or JSON
 - Search positions by name or comment
 - Detect issues like missing responses or transpositions
+- Filter the move list to one player's repertoire for targeted preparation
 
 Happy studying!`;
 export const COMFORT_COLORS: Record<string, string> = {

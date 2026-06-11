@@ -263,7 +263,7 @@ describe('goForward child navigation', () => {
     nav.currentFen = STARTING_FEN;
     goForward();
     expect(nav.currentFen).toBe(childFen);
-    expect(nav.backStack).toEqual([]);
+    expect(nav.backStack).toEqual([STARTING_FEN]);
     expect(nav.forwardStack).toEqual([]);
   });
 

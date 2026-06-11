@@ -39,9 +39,19 @@ export function switchRepertoire(r: Repertoire): void {
 
 export function navigateTo(fen: string): void {
   if (fen === nav.currentFen) return;
-  nav.backStack = [];
-  nav.forwardStack = [];
-  nav.currentPath = buildMovePath(nav.activeRepertoire, fen);
+
+  const pos = getPosition(nav.activeRepertoire, nav.currentFen);
+  const matching = pos ? Object.entries(pos.moves).find(([, e]) => e.toFen === fen) : undefined;
+  if (matching) {
+    nav.backStack.push(nav.currentFen);
+    nav.forwardStack = [];
+    nav.currentPath.push({ fen: nav.currentFen, toFen: fen, san: matching[0], marker: matching[1].marker });
+  } else {
+    nav.backStack = [];
+    nav.forwardStack = [];
+    nav.currentPath = buildMovePath(nav.activeRepertoire, fen);
+  }
+
   nav.currentFen = fen;
 }
 

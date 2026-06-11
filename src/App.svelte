@@ -22,12 +22,14 @@
   import ExportPanel from './lib/components/ExportPanel.svelte';
   import CleanupPanel from './lib/components/CleanupPanel.svelte';
   import { pgnView, pgnCurrentFen, closePgnView } from './lib/state/pgnView.svelte';
-  import { Search, Upload, Download, BookOpen, Trash2, AlertTriangle, ArrowLeft } from '@lucide/svelte';
+  import { loadFromDb } from './lib/state/preparation.svelte';
+  import PreparationPanel from './lib/components/PreparationPanel.svelte';
+  import { Search, Upload, Download, BookOpen, Trash2, AlertTriangle, ArrowLeft, Target } from '@lucide/svelte';
 
   let initialized = $state(false);
   let selectedSquare = $state<string | null>(null);
   let highlightedSquares = $state<string[]>([]);
-  let currentPanel = $state<'main' | 'edit' | 'search' | 'import' | 'export' | 'cleanup' | 'issues'>('main');
+  let currentPanel = $state<'main' | 'edit' | 'search' | 'import' | 'export' | 'cleanup' | 'issues' | 'preparation'>('main');
   let pendingMoveInsert = $state<{ san: string; fen: string } | null>(null);
 
   let boardWidth = $state(720);
@@ -47,6 +49,7 @@
 
   onMount(async () => {
     await initPositionStore();
+    await loadFromDb('white');
     initialized = true;
   });
 
@@ -69,6 +72,7 @@
     const positions = getRepertoirePositions(rep);
     for (const p of positions) void p.updatedAt;
     recomputeLabels(rep);
+    loadFromDb(rep);
   });
 
   $effect(() => {
@@ -161,6 +165,7 @@
         await addMove(nav.activeRepertoire, displayFen, san, afterFen);
         invalidateComfortCache(nav.activeRepertoire, displayFen);
       }
+
       const turn = getTurn(displayFen);
       const depth = findMoveNumber(nav.activeRepertoire, displayFen);
       const isSequenceContinuation = turn === 'b' && displayFen === lastInsertToFen;
@@ -269,6 +274,13 @@
             <span class="issue-badge">{labelData.issueCount}</span>
           {/if}
         </button>
+        <button
+          class="topbar-btn"
+          class:active={currentPanel === 'preparation'}
+          onclick={() => currentPanel = currentPanel === 'preparation' ? 'main' : 'preparation'}
+        >
+          <Target size={14} /> Preparation
+        </button>
       </nav>
     </header>
 
@@ -330,12 +342,14 @@
           <CleanupPanel onClose={() => currentPanel = 'main'} />
         {:else if currentPanel === 'issues'}
           <IssuesPanel onClose={() => currentPanel = 'main'} />
+        {:else if currentPanel === 'preparation'}
+          <PreparationPanel />
         {:else}
           <PositionDisplay position={currentPosition} onEdit={() => currentPanel = 'edit'} />
         {/if}
       </section>
 
-      {#if currentPanel === 'main'}
+      {#if currentPanel === 'main' || currentPanel === 'preparation'}
         <Resizer onResize={(d: number) => movesWidth = Math.max(140, movesWidth - d)} />
         <section class="moves-column" class:locked={pgnView.active} style="width: {movesWidth}px">
           <MoveList onDeleteMove={handleDeleteMove} onReorderMove={handleReorderMove} onConfirmMove={handleConfirmMove} />

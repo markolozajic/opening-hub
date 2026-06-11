@@ -1,8 +1,9 @@
 import Dexie, { type Table } from 'dexie';
-import type { Position } from '../types';
+import type { Position, PreparationRecord } from '../types';
 
 export class OpeningHubDB extends Dexie {
   positions: Table<Position, [string, string]>;
+  preparation: Table<PreparationRecord, [string, string]>;
 
   constructor() {
     super('OpeningHub');
@@ -11,7 +12,16 @@ export class OpeningHubDB extends Dexie {
     this.version(3).stores({
       positions: '[repertoire+fen], repertoire, fen, name, comfortLevel, updatedAt',
     });
+    this.version(4).stores({
+      positions: '[repertoire+fen], repertoire, fen, name, comfortLevel, updatedAt',
+      preparation: '[repertoire+player]',
+    });
+    this.version(5).stores({
+      positions: '[repertoire+fen], repertoire, fen, name, comfortLevel, updatedAt',
+      preparation: '[repertoire+player]',
+    });
     this.positions = this.table('positions');
+    this.preparation = this.table('preparation');
   }
 }
 
