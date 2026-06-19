@@ -3,6 +3,7 @@
   import { importPgn } from '../utils/pgn';
   import { importPositionsJson } from '../db/positionStore.svelte';
   import { invalidateComfortCache } from '../state/comfort.svelte';
+  import { loadFromDb } from '../state/preparation.svelte';
   import { Upload, FileText, Code, X } from '@lucide/svelte';
 
   let {
@@ -35,8 +36,11 @@
     if (!jsonText.trim()) return;
     status = 'importing';
     try {
-      await importPositionsJson(jsonText);
+      const repertoires = await importPositionsJson(jsonText);
       invalidateComfortCache();
+      for (const rep of repertoires) {
+        await loadFromDb(rep);
+      }
       status = 'done';
       message = 'JSON data imported successfully.';
     } catch (e) {

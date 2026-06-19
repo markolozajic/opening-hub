@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { db } from './schema';
-import type { Position, Repertoire, ComfortLevel, Link, PgnAttachment, MoveLabel, MoveMarker } from '../types';
+import type { Position, Repertoire, ComfortLevel, Link, PgnAttachment, MoveLabel, MoveMarker, PreparationRecord } from '../types';
 import { cacheKey, toChessJsFen, getTurn, normalizeFen } from '../utils/fen';
 import { invalidateNoveltyCache } from '../state/novelty.svelte';
 import { STARTING_FEN, STARTING_POSITION_COMMENT } from '../constants';
@@ -314,21 +314,52 @@ export async function deletePosition(repertoire: Repertoire, fen: string): Promi
 }
 
 export async function exportPositionsJson(repertoire?: Repertoire): Promise<string> {
-  const all = repertoire
+  const positions = repertoire
     ? await db.positions.where('repertoire').equals(repertoire).toArray()
     : await db.positions.toArray();
-  return JSON.stringify(all, null, 2);
+  const preparation = repertoire
+    ? await db.preparation.where('repertoire').equals(repertoire).toArray()
+    : await db.preparation.toArray();
+  return JSON.stringify({ positions, preparation }, null, 2);
 }
 
-export async function importPositionsJson(json: string): Promise<void> {
-  const data: Position[] = JSON.parse(json);
-  await db.transaction('rw', db.positions, async () => {
-    for (const p of data) {
+export async function importPositionsJson(json: string): Promise<Repertoire[]> {
+  const data = JSON.parse(json);
+
+  let positions: Position[];
+  let preparation: PreparationRecord[] = [];
+
+  if (Array.isArray(data)) {
+    positions = data;
+  } else {
+    positions = (data as { positions: Position[]; preparation?: PreparationRecord[] }).positions || [];
+    preparation = (data as { positions: Position[]; preparation?: PreparationRecord[] }).preparation || [];
+  }
+
+  const repertoireSet = new Set<Repertoire>();
+  for (const p of positions) {
+    if (p.repertoire === 'white' || p.repertoire === 'black') repertoireSet.add(p.repertoire);
+  }
+  const repertoires = Array.from(repertoireSet);
+
+  await db.transaction('rw', db.positions, db.preparation, async () => {
+    for (const p of positions) {
       const key = cacheKey(p.repertoire, p.fen);
       positionCache[key] = p;
       await db.positions.put(toPlain(p));
     }
+
+    if (preparation.length > 0) {
+      for (const rep of repertoires) {
+        await db.preparation.where('repertoire').equals(rep).delete();
+      }
+      for (const pr of preparation) {
+        await db.preparation.put(pr);
+      }
+    }
   });
+
+  return repertoires;
 }
 
 export async function getOrCreatePosition(repertoire: Repertoire, fen: string): Promise<Position> {

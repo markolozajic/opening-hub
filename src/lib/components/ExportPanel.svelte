@@ -48,7 +48,7 @@
       <Code size={24} />
       <div class="export-info">
         <span class="export-name">JSON Backup</span>
-        <span class="export-desc">Complete repertoire data (all positions)</span>
+        <span class="export-desc">Complete repertoire data (positions + player tags)</span>
       </div>
       <Download size={16} class="export-icon" />
     </button>
