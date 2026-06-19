@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Link } from '../types';
-  import { Film, BookOpen, ExternalLink, Globe, Trash2, Plus, Pencil } from '@lucide/svelte';
+  import { Film, Globe, Trash2, Plus, Pencil } from '@lucide/svelte';
   import { parseYouTubeUrl } from '../utils/youtube';
 
   let {
@@ -14,13 +14,13 @@
   let showForm = $state(false);
   let url = $state('');
   let label = $state('');
-  let type = $state<'youtube' | 'chessable' | 'lichess' | 'other'>('other');
+  let type = $state<'youtube' | 'other'>('other');
   let fetchingTitle = $state(false);
 
   let editingId = $state<string | null>(null);
   let editUrl = $state('');
   let editLabel = $state('');
-  let editType = $state<'youtube' | 'chessable' | 'lichess' | 'other'>('other');
+  let editType = $state<'youtube' | 'other'>('other');
   let editFetchingTitle = $state(false);
 
   const YOUTUBE_RE = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
@@ -84,10 +84,8 @@
             <input bind:value={editUrl} placeholder="URL" class="input" type="url" />
             <input bind:value={editLabel} placeholder="Label (optional)" class="input" />
             <select bind:value={editType} class="input" onchange={() => handleTypeChange(editType, editUrl, editLabel, v => editFetchingTitle = v, v => editLabel = v)}>
-              <option value="other">Other</option>
               <option value="youtube">YouTube</option>
-              <option value="chessable">Chessable</option>
-              <option value="lichess">Lichess</option>
+              <option value="other">Other</option>
             </select>
             {#if editFetchingTitle}
               <span class="fetching">Fetching title…</span>
@@ -102,10 +100,6 @@
             <div class="link-item">
               {#if link.type === 'youtube'}
                 <Film size={14} class="link-icon" />
-              {:else if link.type === 'chessable'}
-                <BookOpen size={14} class="link-icon" />
-              {:else if link.type === 'lichess'}
-                <ExternalLink size={14} class="link-icon" />
               {:else}
                 <Globe size={14} class="link-icon" />
               {/if}
@@ -149,10 +143,8 @@
         <input bind:value={url} placeholder="URL" class="input" type="url" />
         <input bind:value={label} placeholder="Label (optional)" class="input" />
         <select bind:value={type} class="input" onchange={() => handleTypeChange(type, url, label, v => fetchingTitle = v, v => label = v)}>
-          <option value="other">Other</option>
           <option value="youtube">YouTube</option>
-          <option value="chessable">Chessable</option>
-          <option value="lichess">Lichess</option>
+          <option value="other">Other</option>
         </select>
         {#if fetchingTitle}
           <span class="fetching">Fetching title…</span>

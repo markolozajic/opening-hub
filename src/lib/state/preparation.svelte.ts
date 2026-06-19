@@ -10,6 +10,7 @@ export const prepState = $state({
 });
 
 const taggedFens: Record<string, Set<string>> = {};
+const playerDates: Record<string, string> = {};
 
 function repKey(repertoire: Repertoire, player: string): string {
   return `${repertoire}|${player}`;
@@ -97,7 +98,8 @@ export function addPlayer(repertoire: Repertoire, player: string): Promise<void>
   const rk = repKey(repertoire, player);
   if (taggedFens[rk]) return Promise.resolve();
   taggedFens[rk] = new Set();
-  return db.preparation.put({ repertoire, player, taggedFens: [] }).then(syncPlayerNames);
+  playerDates[rk] = new Date().toISOString().slice(0, 10);
+  return db.preparation.put({ repertoire, player, taggedFens: [], updatedAt: playerDates[rk] }).then(syncPlayerNames);
 }
 
 export async function loadFromDb(repertoire: Repertoire): Promise<void> {
@@ -106,8 +108,13 @@ export async function loadFromDb(repertoire: Repertoire): Promise<void> {
   for (const key of Object.keys(taggedFens)) {
     if (key.startsWith(prefix)) delete taggedFens[key];
   }
+  for (const key of Object.keys(playerDates)) {
+    if (key.startsWith(prefix)) delete playerDates[key];
+  }
+  const today = new Date().toISOString().slice(0, 10);
   for (const rec of records) {
     taggedFens[repKey(repertoire, rec.player)] = new Set(rec.taggedFens);
+    playerDates[repKey(repertoire, rec.player)] = rec.updatedAt || today;
   }
   syncPlayerNames();
 }
@@ -131,7 +138,7 @@ export async function tagPosition(repertoire: Repertoire, fen: string, player: s
     }
   }
 
-  await db.preparation.put({ repertoire, player, taggedFens: Array.from(taggedFens[rk]) });
+  await db.preparation.put({ repertoire, player, taggedFens: Array.from(taggedFens[rk]), updatedAt: playerDates[rk] });
   syncPlayerNames();
 }
 
@@ -145,9 +152,10 @@ export async function untagPosition(repertoire: Repertoire, fen: string, player:
   }
   if (taggedFens[rk].size === 0) {
     delete taggedFens[rk];
+    delete playerDates[rk];
     await db.preparation.delete([repertoire, player]);
   } else {
-    await db.preparation.put({ repertoire, player, taggedFens: Array.from(taggedFens[rk]) });
+    await db.preparation.put({ repertoire, player, taggedFens: Array.from(taggedFens[rk]), updatedAt: playerDates[rk] });
   }
   syncPlayerNames();
 }
@@ -155,6 +163,7 @@ export async function untagPosition(repertoire: Repertoire, fen: string, player:
 export async function purgePlayer(repertoire: Repertoire, player: string): Promise<void> {
   const rk = repKey(repertoire, player);
   delete taggedFens[rk];
+  delete playerDates[rk];
   await db.preparation.delete([repertoire, player]);
   if (prepState.selectedPlayer === player) {
     prepState.selectedPlayer = null;
@@ -260,6 +269,17 @@ function navByPath(repertoire: Repertoire, navPath: string[]): string | null {
 
 export function getPlayers(): string[] {
   return prepState.playerNames;
+}
+
+export function getPlayerDate(repertoire: Repertoire, player: string): string | undefined {
+  return playerDates[repKey(repertoire, player)];
+}
+
+export async function refreshPlayerDate(repertoire: Repertoire, player: string): Promise<void> {
+  const rk = repKey(repertoire, player);
+  if (!taggedFens[rk]) return;
+  playerDates[rk] = new Date().toISOString().slice(0, 10);
+  await db.preparation.put({ repertoire, player, taggedFens: Array.from(taggedFens[rk]), updatedAt: playerDates[rk] });
 }
 
 export function selectPlayer(player: string | null): void {

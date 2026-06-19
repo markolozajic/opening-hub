@@ -17,7 +17,7 @@ export interface Link {
   id: string;
   url: string;
   label: string;
-  type: 'youtube' | 'chessable' | 'lichess' | 'other';
+  type: 'youtube' | 'other';
 }
 
 export interface PgnAttachment {
@@ -48,6 +48,7 @@ export interface PreparationRecord {
   repertoire: Repertoire;
   player: string;
   taggedFens: string[];
+  updatedAt?: string;
 }
 
 export interface VerboseMove {

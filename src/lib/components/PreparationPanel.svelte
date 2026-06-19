@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { getPlayers, selectPlayer, prepState, purgePlayer, formatPlayerName, addPlayer } from '../state/preparation.svelte';
+  import { getPlayers, selectPlayer, prepState, purgePlayer, formatPlayerName, addPlayer, getPlayerDate, refreshPlayerDate } from '../state/preparation.svelte';
   import { nav } from '../state/navigation.svelte';
-  import { Plus, Trash2, X } from '@lucide/svelte';
+  import { Plus, Trash2, X, RefreshCw } from '@lucide/svelte';
 
   let input = $state('');
   let showDropdown = $state(false);
@@ -13,6 +13,7 @@
       ? allPlayers.filter(p => p.toLowerCase().includes(input.trim().toLowerCase()))
       : allPlayers
   );
+  let dateAdded = $derived(prepState.selectedPlayer ? getPlayerDate(nav.activeRepertoire, prepState.selectedPlayer) : undefined);
 
   function handleFocus() {
     showDropdown = true;
@@ -106,6 +107,12 @@
     <div class="filter-bar">
       <span class="filter-label">Filtering by <strong>{formatPlayerName(prepState.selectedPlayer)}</strong></span>
       <div class="filter-actions">
+        {#if dateAdded}
+          <span class="filter-date">Repertoire last checked: {dateAdded}</span>
+        {/if}
+        <button class="btn icon-btn" onclick={() => refreshPlayerDate(nav.activeRepertoire, prepState.selectedPlayer!)} title="Refresh date">
+          <RefreshCw size={13} />
+        </button>
         <button class="btn icon-btn" onclick={() => handleRemovePlayer(prepState.selectedPlayer!)} title="Remove player">
           <Trash2 size={13} />
         </button>
@@ -168,7 +175,8 @@
     border: 1px solid var(--accent);
   }
   .filter-label { font-size: 0.8125rem; color: var(--accent); }
-  .filter-actions { display: flex; gap: 0.25rem; }
+  .filter-date { font-size: 0.6875rem; color: var(--muted); margin-right: 0.25rem; }
+  .filter-actions { display: flex; gap: 0.25rem; align-items: center; }
   .btn {
     padding: 0.375rem 0.75rem; border: 1px solid var(--border); border-radius: 4px;
     background: var(--surface1); color: var(--text-h); cursor: pointer; font-size: 0.8125rem;
