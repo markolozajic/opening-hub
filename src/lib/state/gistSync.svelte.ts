@@ -7,9 +7,6 @@ import type { Position, PreparationRecord } from '../types';
 const GIST_TOKEN_KEY = 'openinghub_gist_token';
 const GIST_ID_KEY = 'openinghub_gist_id';
 
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-let pushScheduled = false;
-
 export const syncState = $state({
   hasToken: false,
   hasGist: false,
@@ -39,7 +36,6 @@ export function setGistCredentials(token: string, gistId: string): void {
   localStorage.setItem(GIST_ID_KEY, gistId);
   readCreds();
   if (gistId) {
-    installHooks();
     mergeAndSync();
   }
 }
@@ -241,41 +237,8 @@ export async function mergeAndSync(): Promise<void> {
   }
 }
 
-function schedulePush(): void {
-  if (pushScheduled) return;
-  pushScheduled = true;
-
-  if (debounceTimer) clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(async () => {
-    pushScheduled = false;
-    const creds = credentials();
-    if (!creds) return;
-    try {
-      const json = await dumpLocalData();
-      await pushToGist(json);
-      syncState.lastSync = new Date().toLocaleString();
-    } catch (e) {
-      syncState.error = e instanceof Error ? e.message : 'Auto-sync failed';
-    }
-  }, 3000);
-}
-
-let hooksInstalled = false;
-
-function installHooks(): void {
-  if (hooksInstalled) return;
-  hooksInstalled = true;
-  db.positions.hook('creating').subscribe(() => schedulePush());
-  db.positions.hook('updating').subscribe(() => schedulePush());
-  db.positions.hook('deleting').subscribe(() => schedulePush());
-  db.preparation.hook('creating').subscribe(() => schedulePush());
-  db.preparation.hook('updating').subscribe(() => schedulePush());
-  db.preparation.hook('deleting').subscribe(() => schedulePush());
-}
-
 export function initSync(): void {
   readCreds();
   if (!syncState.hasGist) return;
-  installHooks();
   mergeAndSync();
 }
