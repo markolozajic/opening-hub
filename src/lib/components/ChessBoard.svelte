@@ -37,11 +37,10 @@
   const DRAG_THRESHOLD = 5;
 
   function getSvgPoint(svg: SVGSVGElement, clientX: number, clientY: number): {x: number, y: number} {
-    const rect = svg.getBoundingClientRect();
-    return {
-      x: (clientX - rect.left) * (size / rect.width),
-      y: (clientY - rect.top) * (size / rect.height),
-    };
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    return pt.matrixTransform(svg.getScreenCTM()!.inverse());
   }
 
   function sqFromPoint(pt: {x: number, y: number}): {df: number; dr: number; rank: number; file: number; sq: string} | null {

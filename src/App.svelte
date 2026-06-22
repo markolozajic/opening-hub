@@ -25,7 +25,7 @@
   import { loadFromDb } from './lib/state/preparation.svelte';
   import PreparationPanel from './lib/components/PreparationPanel.svelte';
   import SettingsPanel from './lib/components/SettingsPanel.svelte';
-  import { initSync } from './lib/state/gistSync.svelte';
+  import { getGistCredentials, mergeAndSync } from './lib/state/gistSync.svelte';
   import { Search, Upload, Download, BookOpen, Trash2, AlertTriangle, ArrowLeft, Target, Cog } from '@lucide/svelte';
 
   let initialized = $state(false);
@@ -52,7 +52,9 @@
   onMount(async () => {
     await initPositionStore();
     await loadFromDb('white');
-    initSync();
+    if (getGistCredentials()) {
+      await mergeAndSync();
+    }
     initialized = true;
   });
 
