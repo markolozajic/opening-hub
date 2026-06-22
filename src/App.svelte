@@ -24,12 +24,14 @@
   import { pgnView, pgnCurrentFen, closePgnView } from './lib/state/pgnView.svelte';
   import { loadFromDb } from './lib/state/preparation.svelte';
   import PreparationPanel from './lib/components/PreparationPanel.svelte';
-  import { Search, Upload, Download, BookOpen, Trash2, AlertTriangle, ArrowLeft, Target } from '@lucide/svelte';
+  import SettingsPanel from './lib/components/SettingsPanel.svelte';
+  import { initSync } from './lib/state/gistSync.svelte';
+  import { Search, Upload, Download, BookOpen, Trash2, AlertTriangle, ArrowLeft, Target, Cog } from '@lucide/svelte';
 
   let initialized = $state(false);
   let selectedSquare = $state<string | null>(null);
   let highlightedSquares = $state<string[]>([]);
-  let currentPanel = $state<'main' | 'edit' | 'search' | 'import' | 'export' | 'cleanup' | 'issues' | 'preparation'>('main');
+  let currentPanel = $state<'main' | 'edit' | 'search' | 'import' | 'export' | 'cleanup' | 'issues' | 'preparation' | 'settings'>('main');
   let pendingMoveInsert = $state<{ san: string; fen: string } | null>(null);
 
   let boardWidth = $state(720);
@@ -50,6 +52,7 @@
   onMount(async () => {
     await initPositionStore();
     await loadFromDb('white');
+    initSync();
     initialized = true;
   });
 
@@ -276,6 +279,13 @@
         </button>
         <button
           class="topbar-btn"
+          class:active={currentPanel === 'settings'}
+          onclick={() => currentPanel = currentPanel === 'settings' ? 'main' : 'settings'}
+        >
+          <Cog size={14} /> Settings
+        </button>
+        <button
+          class="topbar-btn"
           class:active={currentPanel === 'preparation'}
           onclick={() => currentPanel = currentPanel === 'preparation' ? 'main' : 'preparation'}
         >
@@ -344,6 +354,8 @@
           <IssuesPanel onClose={() => currentPanel = 'main'} />
         {:else if currentPanel === 'preparation'}
           <PreparationPanel />
+        {:else if currentPanel === 'settings'}
+          <SettingsPanel onClose={() => currentPanel = 'main'} />
         {:else}
           <PositionDisplay position={currentPosition} onEdit={() => currentPanel = 'edit'} />
         {/if}
