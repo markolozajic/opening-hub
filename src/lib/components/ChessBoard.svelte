@@ -38,7 +38,10 @@
 
   function getSvgPoint(svg: SVGSVGElement, clientX: number, clientY: number): {x: number, y: number} {
     const rect = svg.getBoundingClientRect();
-    return { x: clientX - rect.left, y: clientY - rect.top };
+    return {
+      x: (clientX - rect.left) * (size / rect.width),
+      y: (clientY - rect.top) * (size / rect.height),
+    };
   }
 
   function sqFromPoint(pt: {x: number, y: number}): {df: number; dr: number; rank: number; file: number; sq: string} | null {
