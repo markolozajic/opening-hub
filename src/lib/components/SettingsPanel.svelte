@@ -1,6 +1,6 @@
 <script lang="ts">
   import { syncState, getGistCredentials, setGistCredentials, clearGistCredentials, createGist, mergeAndSync } from '../state/gistSync.svelte';
-  import { Cog, RefreshCw, Link, Plus, Trash2, X, Check, AlertTriangle } from '@lucide/svelte';
+  import { RefreshCw, Link, Plus, Trash2, X, Check, AlertTriangle } from '@lucide/svelte';
 
   let {
     onClose = undefined as (() => void) | undefined,
@@ -9,17 +9,10 @@
   let token = $state('');
   let gistId = $state('');
   let status = $state<string>('');
-  let hasToken = $derived(!!getGistCredentials());
-  let creds = $derived(getGistCredentials());
 
   function handleSaveToken() {
     if (!token.trim()) return;
-    status = 'saving';
-    if (creds) {
-      setGistCredentials(token.trim(), creds.gistId);
-    } else {
-      setGistCredentials(token.trim(), '');
-    }
+    setGistCredentials(token.trim(), '');
     token = '';
     status = 'token-saved';
   }
@@ -27,9 +20,9 @@
   async function handleCreateGist() {
     status = 'creating';
     try {
-      const json = JSON.stringify({ positions: [], preparation: [] });
       const newId = await createGist();
-      setGistCredentials(getGistCredentials()!.token, newId);
+      const creds = getGistCredentials();
+      if (creds) setGistCredentials(creds.token, newId);
       status = 'created';
     } catch (e) {
       status = 'error';
@@ -37,7 +30,9 @@
   }
 
   function handleLinkGist() {
-    if (!gistId.trim() || !creds) return;
+    if (!gistId.trim()) return;
+    const creds = getGistCredentials();
+    if (!creds) return;
     setGistCredentials(creds.token, gistId.trim());
     gistId = '';
     status = 'linked';
@@ -71,7 +66,7 @@
       <a href="https://github.com/settings/tokens/new?scopes=gist&description=Opening%20Hub" target="_blank" rel="noopener noreferrer">github.com/settings/tokens</a>.
     </p>
 
-    {#if !creds}
+    {#if !syncState.hasToken}
       <div class="field">
         <input bind:value={token} type="password" placeholder="GitHub personal access token" class="input" />
         <button class="btn primary" onclick={handleSaveToken} disabled={!token.trim()}>
@@ -81,11 +76,10 @@
     {:else}
       <div class="info-row">
         <span class="info-label">Token:</span>
-        <code class="info-value">saved ({creds.token.slice(0, 4)}…{creds.token.slice(-4)})</code>
-        <button class="btn-text" onclick={() => { token = creds.token; }}>Update</button>
+        <code class="info-value">saved ({syncState.tokenPreview})</code>
       </div>
 
-      {#if !creds.gistId}
+      {#if !syncState.hasGist}
         <p class="hint">Link an existing Gist or create a new one.</p>
         <div class="field">
           <input bind:value={gistId} placeholder="Gist ID (e.g. abc123def456)" class="input" />
@@ -99,8 +93,8 @@
       {:else}
         <div class="info-row">
           <span class="info-label">Gist:</span>
-          <code class="info-value">{creds.gistId}</code>
-          <a href="https://gist.github.com/{creds.gistId}" target="_blank" rel="noopener noreferrer" class="btn-text">Open</a>
+          <code class="info-value">{getGistCredentials()?.gistId ?? ''}</code>
+          <a href="https://gist.github.com/{getGistCredentials()?.gistId}" target="_blank" rel="noopener noreferrer" class="btn-text">Open</a>
         </div>
 
         <div class="sync-actions">

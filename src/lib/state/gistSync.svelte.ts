@@ -2,7 +2,7 @@ import { db } from '../db/schema';
 import { positionCache } from '../db/positionStore.svelte';
 import { toPlain } from '../utils/helpers';
 import { cacheKey } from '../utils/fen';
-import type { Position, PreparationRecord, Repertoire } from '../types';
+import type { Position, PreparationRecord } from '../types';
 
 const GIST_TOKEN_KEY = 'openinghub_gist_token';
 const GIST_ID_KEY = 'openinghub_gist_id';
@@ -11,11 +11,21 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let pushScheduled = false;
 
 export const syncState = $state({
-  configured: false,
+  hasToken: false,
+  hasGist: false,
+  tokenPreview: '',
   syncing: false,
   lastSync: null as string | null,
   error: null as string | null,
 });
+
+function readCreds(): void {
+  const token = localStorage.getItem(GIST_TOKEN_KEY);
+  const gistId = localStorage.getItem(GIST_ID_KEY);
+  syncState.hasToken = !!token;
+  syncState.hasGist = !!(token && gistId);
+  syncState.tokenPreview = token ? `${token.slice(0, 4)}…${token.slice(-4)}` : '';
+}
 
 export function getGistCredentials(): { token: string; gistId?: string } | null {
   const token = localStorage.getItem(GIST_TOKEN_KEY);
@@ -27,13 +37,13 @@ export function getGistCredentials(): { token: string; gistId?: string } | null 
 export function setGistCredentials(token: string, gistId: string): void {
   localStorage.setItem(GIST_TOKEN_KEY, token);
   localStorage.setItem(GIST_ID_KEY, gistId);
-  syncState.configured = true;
+  readCreds();
 }
 
 export function clearGistCredentials(): void {
   localStorage.removeItem(GIST_TOKEN_KEY);
   localStorage.removeItem(GIST_ID_KEY);
-  syncState.configured = false;
+  readCreds();
 }
 
 function credentials(): { token: string; gistId: string } | null {
@@ -249,10 +259,9 @@ function schedulePush(): void {
 let hooksInstalled = false;
 
 export function initSync(): void {
-  const creds = getGistCredentials();
-  syncState.configured = !!creds;
+  readCreds();
 
-  if (!creds || hooksInstalled) return;
+  if (!syncState.hasGist || hooksInstalled) return;
   hooksInstalled = true;
 
   db.positions.hook('creating').subscribe(() => schedulePush());
