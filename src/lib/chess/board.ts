@@ -5,10 +5,18 @@ export const LIGHT_SQUARE = '#f0d9b5';
 export const DARK_SQUARE = '#b58863';
 
 export const PIECE_URL: Record<string, string> = {
-  wK: '/pieces/wk.svg', wQ: '/pieces/wq.svg', wR: '/pieces/wr.svg',
-  wB: '/pieces/wb.svg', wN: '/pieces/wn.svg', wP: '/pieces/wp.svg',
-  bK: '/pieces/bk.svg', bQ: '/pieces/bq.svg', bR: '/pieces/br.svg',
-  bB: '/pieces/bb.svg', bN: '/pieces/bn.svg', bP: '/pieces/bp.svg',
+  wK: `${import.meta.env.BASE_URL}pieces/wk.svg`,
+  wQ: `${import.meta.env.BASE_URL}pieces/wq.svg`,
+  wR: `${import.meta.env.BASE_URL}pieces/wr.svg`,
+  wB: `${import.meta.env.BASE_URL}pieces/wb.svg`,
+  wN: `${import.meta.env.BASE_URL}pieces/wn.svg`,
+  wP: `${import.meta.env.BASE_URL}pieces/wp.svg`,
+  bK: `${import.meta.env.BASE_URL}pieces/bk.svg`,
+  bQ: `${import.meta.env.BASE_URL}pieces/bq.svg`,
+  bR: `${import.meta.env.BASE_URL}pieces/br.svg`,
+  bB: `${import.meta.env.BASE_URL}pieces/bb.svg`,
+  bN: `${import.meta.env.BASE_URL}pieces/bn.svg`,
+  bP: `${import.meta.env.BASE_URL}pieces/bp.svg`,
 };
 
 export function parseFenBoard(fen: string): (string | null)[][] {
