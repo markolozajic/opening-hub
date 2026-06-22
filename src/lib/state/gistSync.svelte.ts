@@ -38,6 +38,10 @@ export function setGistCredentials(token: string, gistId: string): void {
   localStorage.setItem(GIST_TOKEN_KEY, token);
   localStorage.setItem(GIST_ID_KEY, gistId);
   readCreds();
+  if (gistId) {
+    installHooks();
+    mergeAndSync();
+  }
 }
 
 export function clearGistCredentials(): void {
@@ -258,18 +262,20 @@ function schedulePush(): void {
 
 let hooksInstalled = false;
 
-export function initSync(): void {
-  readCreds();
-
-  if (!syncState.hasGist || hooksInstalled) return;
+function installHooks(): void {
+  if (hooksInstalled) return;
   hooksInstalled = true;
-
   db.positions.hook('creating').subscribe(() => schedulePush());
   db.positions.hook('updating').subscribe(() => schedulePush());
   db.positions.hook('deleting').subscribe(() => schedulePush());
   db.preparation.hook('creating').subscribe(() => schedulePush());
   db.preparation.hook('updating').subscribe(() => schedulePush());
   db.preparation.hook('deleting').subscribe(() => schedulePush());
+}
 
+export function initSync(): void {
+  readCreds();
+  if (!syncState.hasGist) return;
+  installHooks();
   mergeAndSync();
 }
