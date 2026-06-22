@@ -28,7 +28,7 @@
     status = 'creating';
     try {
       const json = JSON.stringify({ positions: [], preparation: [] });
-      const newId = await createGist(json);
+      const newId = await createGist();
       setGistCredentials(getGistCredentials()!.token, newId);
       status = 'created';
     } catch (e) {

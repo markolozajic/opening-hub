@@ -17,11 +17,11 @@ export const syncState = $state({
   error: null as string | null,
 });
 
-export function getGistCredentials(): { token: string; gistId: string } | null {
+export function getGistCredentials(): { token: string; gistId?: string } | null {
   const token = localStorage.getItem(GIST_TOKEN_KEY);
   const gistId = localStorage.getItem(GIST_ID_KEY);
-  if (!token || !gistId) return null;
-  return { token, gistId };
+  if (!token) return null;
+  return { token, gistId: gistId ?? '' };
 }
 
 export function setGistCredentials(token: string, gistId: string): void {
@@ -42,12 +42,18 @@ function credentials(): { token: string; gistId: string } | null {
     syncState.error = 'No GitHub credentials configured.';
     return null;
   }
-  return creds;
+  if (!creds.gistId) {
+    syncState.error = 'No Gist linked. Create or link a Gist in Settings.';
+    return null;
+  }
+  return { token: creds.token, gistId: creds.gistId };
 }
 
-export async function createGist(json: string): Promise<string> {
+export async function createGist(json?: string): Promise<string> {
   const creds = getGistCredentials();
   if (!creds) throw new Error('No token configured.');
+
+  const content = json ?? await dumpLocalData();
 
   const res = await fetch('https://api.github.com/gists', {
     method: 'POST',
@@ -59,7 +65,7 @@ export async function createGist(json: string): Promise<string> {
     body: JSON.stringify({
       description: 'Opening Hub repertoire backup',
       public: false,
-      files: { 'repertoire.json': { content: json } },
+      files: { 'repertoire.json': { content: content } },
     }),
   });
 
