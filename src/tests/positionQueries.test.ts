@@ -12,7 +12,6 @@ const { mockPositionCache } = vi.hoisted(() => {
 
 vi.mock('../lib/db/positionStore.svelte', () => ({
   positionCache: mockPositionCache,
-  getRootFen: () => ROOT,
   getPosition: (repertoire: Repertoire, fen: string) =>
     mockPositionCache[cacheKey(repertoire, fen)],
 }));

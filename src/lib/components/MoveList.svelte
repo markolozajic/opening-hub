@@ -13,7 +13,7 @@
   import MiniBoard from './MiniBoard.svelte';
   import ComfortBadge from './ComfortBadge.svelte';
   import { navigateTo, navigatePath } from '../state/navigation.svelte';
-  import { prepState, nextSansForPath, selectOpponent, formatOpponentName, tagPosition, untagPosition, getOpponentNames, getDirectlyTaggedOpponents } from '../state/preparation.svelte';
+  import { prepState, nextSansForPath, selectOpponent, tagPosition, untagPosition, getOpponentNames, getDirectlyTaggedOpponents } from '../state/preparation.svelte';
   import { Trash2, GripVertical, Eye, X, Pencil } from '@lucide/svelte';
 
   let {
@@ -256,7 +256,7 @@
 <div class="move-list">
   {#if prepState.selectedOpponent}
     <div class="opponent-filter-banner">
-      <span class="opponent-filter-label">PLAYER FILTER: {formatOpponentName(prepState.selectedOpponent)}</span>
+      <span class="opponent-filter-label">PLAYER FILTER: {prepState.selectedOpponent?.includes(', ') ? prepState.selectedOpponent.split(', ').reverse().join(' ') : prepState.selectedOpponent}</span>
       <button class="banner-clear-btn" onclick={() => selectOpponent(null)} title="Clear player filter">
         <X size={12} /> Clear
       </button>
@@ -271,7 +271,7 @@
     </div>
   </div>
   {#if sortedMoves.length === 0}
-    <p class="empty">{prepState.selectedOpponent ? `No moves by ${formatOpponentName(prepState.selectedOpponent)} at this position.` : 'No moves added yet. Click a piece on the board.'}</p>
+    <p class="empty">{prepState.selectedOpponent ? `No moves by ${prepState.selectedOpponent.includes(', ') ? prepState.selectedOpponent.split(', ').reverse().join(' ') : prepState.selectedOpponent} at this position.` : 'No moves added yet. Click a piece on the board.'}</p>
   {:else}
     <div class="moves" role="list">
       {#each numberedMoves as move, i}
@@ -441,7 +441,7 @@
             <div class="meta-tagged-list">
               {#each metaTaggedAtPosition as p}
                 <span class="meta-tag-item">
-                  {formatOpponentName(p)}
+                  {p.includes(', ') ? p.split(', ').reverse().join(' ') : p}
                   <button class="meta-untag-btn" onclick={() => handleMetaUntag(p)}>x</button>
                 </span>
               {/each}

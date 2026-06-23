@@ -23,33 +23,18 @@ export function openPgnView(pgn: string): void {
       commentsMap[fen] = comment;
     }
 
-    function fmt(v: string): string {
-      return v && v !== '?' && v !== '*' && v !== '????.??.??' && v !== '-' ? v : '';
-    }
-
-    function extractYear(text: string): string | null {
-      const m = text.match(/(\d{4})/);
-      return m ? m[1] : null;
-    }
-
     function buildLabel(white: string, black: string, result: string, event: string, date: string): string {
+      const ok = (v: string) => v && v !== '?' && v !== '*' && v !== '????.??.??' && v !== '-';
       const parts: string[] = [];
 
-      if (fmt(white) && fmt(black)) {
-        let players = `${white} vs ${black}`;
-        if (fmt(result)) players += `, ${result}`;
-        parts.push(players);
+      if (ok(white) && ok(black)) {
+        parts.push(`${white} vs ${black}${ok(result) ? `, ${result}` : ''}`);
       }
 
-      const eventYear = event ? extractYear(event) : null;
-      const dateYear = date && date !== '?' && date !== '????.??.??' ? date.substring(0, 4) : '';
-      const year = eventYear || fmt(dateYear) || '';
-      const cleanEvent = eventYear ? event.replace(/\s*\d{4}\s*$/, '').trim() : (fmt(event) || '');
+      const year = event?.match(/(\d{4})/)?.[1] || (ok(date) ? date.substring(0, 4) : '');
+      const cleanEvent = event?.replace(/\s*\d{4}\s*$/, '').trim() || (ok(event) ? event : '');
 
-      const eventParts: string[] = [];
-      if (cleanEvent) eventParts.push(cleanEvent);
-      if (year) eventParts.push(year);
-      if (eventParts.length > 0) parts.push(eventParts.join(', '));
+      if (cleanEvent || year) parts.push([cleanEvent, year].filter(Boolean).join(', '));
 
       return parts.length > 0 ? parts.join(' · ') : 'Game';
     }

@@ -1,10 +1,9 @@
 <script lang="ts">
   import type { Position } from '../types';
   import { nav } from '../state/navigation.svelte';
-  import { getSideLabel } from '../utils/fen';
   import { getComfort } from '../state/comfort.svelte';
   import { getNovelty } from '../state/novelty.svelte';
-  import { getOpponentsAt, prepState, formatOpponentName } from '../state/preparation.svelte';
+  import { getOpponentsAt, prepState } from '../state/preparation.svelte';
   import { pgnView } from '../state/pgnView.svelte';
   import { getDrawCounts } from '../state/drawCounts.svelte';
   import ComfortBadge from './ComfortBadge.svelte';
@@ -21,7 +20,7 @@
 
   let fen = $derived(position?.fen ?? '');
   let comfort = $derived(fen ? getComfort(nav.activeRepertoire, fen) : null);
-  let turn = $derived(position ? getSideLabel(position.fen.split(' ')[1] as 'w' | 'b' || 'w') : '');
+  let turn = $derived(position ? (position.fen.split(' ')[1] === 'w' ? 'White to move' : 'Black to move') : '');
   let isNovel = $derived(fen ? getNovelty(nav.activeRepertoire, fen) : false);
   let drawCounts = $derived(fen ? getDrawCounts(nav.activeRepertoire, fen) : { forced: 0, practical: 0 });
   let displayOpponents = $derived<{ name: string; certain: boolean }[]>(fen ? getOpponentsAt(nav.activeRepertoire, fen) : []);
@@ -62,7 +61,7 @@
           <span class="everybody">everybody</span>
         {:else if displayOpponents.length > 0}
           {#each displayOpponents as p, i}
-            <span class="opponent-name" class:selected-opponent={p.name === prepState.selectedOpponent}>{formatOpponentName(p.name)}{#if !p.certain}?{/if}</span>{i < displayOpponents.length - 1 ? ', ' : ''}
+            <span class="opponent-name" class:selected-opponent={p.name === prepState.selectedOpponent}>{p.name.includes(', ') ? p.name.split(', ').reverse().join(' ') : p.name}{#if !p.certain}?{/if}</span>{i < displayOpponents.length - 1 ? ', ' : ''}
           {/each}
         {:else}
           <span class="no-opponents">nobody</span>

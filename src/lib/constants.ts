@@ -46,10 +46,4 @@ export const COMFORT_VALUE: Record<string, number> = {
   comfortable: 3,
   easy: 4,
 };
-export const COMFORT_SEVERITY: Record<string, number> = {
-  easy: 0,
-  comfortable: 1,
-  moderate: 2,
-  uncomfortable: 3,
-  struggling: 4,
-};
+

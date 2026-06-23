@@ -1,5 +1,6 @@
 import type { Repertoire } from '../types';
 import { getPosition } from '../db/positionStore.svelte';
+import { clearPrefix } from '../utils/helpers';
 import { STARTING_FEN } from '../constants';
 
 let invalidationToken = $state(0);
@@ -55,17 +56,7 @@ export function getNovelty(repertoire: Repertoire, fen: string): boolean {
   return result;
 }
 
-export function invalidateNoveltyCache(repertoire?: string, fen?: string): void {
-  if (repertoire) {
-    for (const key of Object.keys(noveltyCache)) {
-      if (key.startsWith(`${repertoire}|`)) {
-        delete noveltyCache[key];
-      }
-    }
-  } else {
-    for (const key of Object.keys(noveltyCache)) {
-      delete noveltyCache[key];
-    }
-  }
+export function invalidateNoveltyCache(repertoire?: string): void {
+  clearPrefix(noveltyCache as Record<string, unknown>, repertoire);
   invalidationToken++;
 }

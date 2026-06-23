@@ -16,10 +16,6 @@ export function getLegalMoves(fen: string): VerboseMove[] {
   }
 }
 
-export function findMoveBySquares(fen: string, fromSq: string, toSq: string): VerboseMove | undefined {
-  return getLegalMoves(fen).find(m => m.from === fromSq && m.to === toSq);
-}
-
 export function getPieceAt(fen: string, sq: string): { color: 'w' | 'b'; type: string } | null {
   try {
     const chess = new Chess(toChessJsFen(fen));

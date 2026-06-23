@@ -1,12 +1,13 @@
 import type { Repertoire, SortMode } from '../types';
-import { getRootFen, getPosition, positionCache } from '../db/positionStore.svelte';
+import { getPosition, positionCache } from '../db/positionStore.svelte';
 import { buildMovePath } from '../utils/positionQueries';
 import type { MovePathStep } from '../types';
 import { cacheKey } from '../utils/fen';
+import { STARTING_FEN } from '../constants';
 
 export const nav = $state({
   activeRepertoire: 'white' as Repertoire,
-  currentFen: getRootFen(),
+  currentFen: STARTING_FEN,
   backStack: [] as string[],
   forwardStack: [] as MovePathStep[],
   currentPath: [] as MovePathStep[],
@@ -29,8 +30,7 @@ const parentIndex = $derived.by(() => {
 export function switchRepertoire(r: Repertoire): void {
   if (r === nav.activeRepertoire) return;
   nav.activeRepertoire = r;
-  const rootFen = getRootFen();
-  nav.currentFen = rootFen;
+  nav.currentFen = STARTING_FEN;
   nav.backStack = [];
   nav.forwardStack = [];
   nav.currentPath = [];
@@ -91,7 +91,7 @@ export function goBack(): string | undefined {
 }
 
 export function canGoBack(): boolean {
-  return nav.backStack.length > 0 || nav.currentFen !== getRootFen();
+  return nav.backStack.length > 0 || nav.currentFen !== STARTING_FEN;
 }
 
 export function canGoForward(): boolean {
@@ -99,16 +99,15 @@ export function canGoForward(): boolean {
 }
 
 export function navigateToRoot(): void {
-  const rootFen = getRootFen();
-  if (nav.currentFen !== rootFen) {
+  if (nav.currentFen !== STARTING_FEN) {
     nav.backStack = [];
     nav.forwardStack = [];
     nav.currentPath = [];
-    nav.currentFen = rootFen;
+    nav.currentFen = STARTING_FEN;
   }
 }
 
-export function getChildMoves(): { san: string; toFen: string }[] {
+function getChildMoves(): { san: string; toFen: string }[] {
   const pos = getPosition(nav.activeRepertoire, nav.currentFen);
   if (!pos) return [];
   return Object.entries(pos.moves).map(([san, edge]) => ({ san, toFen: edge.toFen }));

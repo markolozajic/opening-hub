@@ -13,7 +13,7 @@ Chess opening repertoire manager — fully **client-side SPA** (no server). Buil
 
 ## Key Directories
 - `src/lib/components/` — 17 Svelte components (ChessBoard, MoveList, PositionEditor, etc.)
-- `src/lib/db/` — IndexedDB schema (`schema.ts`), CRUD store (`positionStore.svelte.ts`), migrations
+- `src/lib/db/` — IndexedDB schema (`schema.ts`), CRUD store (`positionStore.svelte.ts`)
 - `src/lib/state/` — Reactive state: `navigation.svelte.ts`, `comfort.svelte.ts`, `labels.svelte.ts`, `preparation.svelte.ts`
 - `src/lib/chess/` — Board rendering & chess.js wrappers
 - `src/lib/utils/` — FEN/PGN helpers, position queries, utilities

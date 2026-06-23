@@ -1,11 +1,6 @@
 import type { ComfortLevel, SortMode } from '../types';
 import { COMFORT_VALUE } from '../constants';
 
-export function comfortRank(c: string | null | undefined): number {
-  if (c == null) return Infinity;
-  return COMFORT_VALUE[c] ?? 2;
-}
-
 export function sortMoves<T extends { san: string; comfort: ComfortLevel | null }>(
   moveOrder: string[] | undefined,
   moves: T[],
@@ -18,7 +13,11 @@ export function sortMoves<T extends { san: string; comfort: ComfortLevel | null 
     const unordered = moves.filter(m => !orderSet.has(m.san));
     return [...ordered.map(san => moves.find(m => m.san === san)!), ...unordered];
   }
-  return [...moves].sort((a, b) => comfortRank(a.comfort) - comfortRank(b.comfort));
+  return [...moves].sort((a, b) => {
+    const ar = a.comfort == null ? Infinity : (COMFORT_VALUE[a.comfort] ?? 2);
+    const br = b.comfort == null ? Infinity : (COMFORT_VALUE[b.comfort] ?? 2);
+    return ar - br;
+  });
 }
 
 export function formatNumberedSan(depth: number | null, turn: 'w' | 'b', san: string): string {

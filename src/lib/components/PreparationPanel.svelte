@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getOpponentNames, selectOpponent, prepState, purgeOpponent, formatOpponentName, addOpponent, getOpponentDate, refreshOpponentDate } from '../state/preparation.svelte';
+  import { getOpponentNames, selectOpponent, prepState, purgeOpponent, addOpponent, getOpponentDate, refreshOpponentDate } from '../state/preparation.svelte';
   import { nav } from '../state/navigation.svelte';
   import { Plus, Trash2, X, RefreshCw } from '@lucide/svelte';
 
@@ -105,7 +105,7 @@
 
   {#if prepState.selectedOpponent}
     <div class="filter-bar">
-      <span class="filter-label">Filtering by <strong>{formatOpponentName(prepState.selectedOpponent)}</strong></span>
+      <span class="filter-label">Filtering by <strong>{(prepState.selectedOpponent?.includes(', ') ? prepState.selectedOpponent.split(', ').reverse().join(' ') : prepState.selectedOpponent)}</strong></span>
       <div class="filter-actions">
         {#if dateAdded}
           <span class="filter-date">Repertoire last checked: {dateAdded}</span>

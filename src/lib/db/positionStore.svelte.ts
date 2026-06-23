@@ -4,20 +4,11 @@ import type { Position, Repertoire, ComfortLevel, Link, PgnAttachment, MoveLabel
 import { cacheKey, toChessJsFen, getTurn, normalizeFen } from '../utils/fen';
 import { invalidateNoveltyCache } from '../state/novelty.svelte';
 import { STARTING_FEN, STARTING_POSITION_COMMENT } from '../constants';
-import { migrateMoveLabels, migrateComfortCoherence, migrateRootComment } from './migrations';
 import { findMoveNumber } from '../utils/positionQueries';
 import { formatNumberedSan } from '../utils/positionUtils';
 import { toPlain } from '../utils/helpers';
 
 export const positionCache: Record<string, Position> = $state({});
-
-function endsWithMove(name: string): boolean {
-  const last = name.split(/[, ]+/).pop()?.trim() ?? '';
-  const movePart = last.replace(/^(?:\d+\.\.\.?\s*)/, '');
-  const stripped = movePart.replace(/[!?]+$/, '');
-  return /^(?:[NBKRQO]?x?[a-h][1-8](?:=[NBKRQO])?[+#]?|O-O(?:-O)?[+#]?)$/.test(stripped)
-    || /^[a-h][1-8](?:=[NBKRQO])?[+#]?$/.test(stripped);
-}
 
 function computeAutoName(
   parentName: string | undefined,
@@ -30,20 +21,23 @@ function computeAutoName(
   if (parentIsAutoNamed) {
     return parentName + ' ' + (turn === 'b' ? san : labeledSan);
   }
-  if (endsWithMove(parentName)) {
-    return parentName + ' ' + (turn === 'b' ? san : labeledSan);
+  {
+    const last = parentName.split(/[, ]+/).pop()?.trim() ?? '';
+    const stripped = last.replace(/^(?:\d+\.\.\.?\s*)/, '').replace(/[!?]+$/, '');
+    const isMove = /^(?:[NBKRQO]?x?[a-h][1-8](?:=[NBKRQO])?[+#]?|O-O(?:-O)?[+#]?)$/.test(stripped)
+      || /^[a-h][1-8](?:=[NBKRQO])?[+#]?$/.test(stripped);
+    if (isMove) return parentName + ' ' + (turn === 'b' ? san : labeledSan);
   }
   return parentName + ', ' + labeledSan;
 }
 
 async function ensureRoot(repertoire: Repertoire): Promise<void> {
-  const rootFen = getRootFen();
-  const key = cacheKey(repertoire, rootFen);
+  const key = cacheKey(repertoire, STARTING_FEN);
   if (positionCache[key]) return;
   const now = Date.now();
   const root: Position = {
     repertoire,
-    fen: rootFen,
+    fen: STARTING_FEN,
     comment: STARTING_POSITION_COMMENT,
     moves: {},
     links: [],
@@ -62,13 +56,7 @@ export async function initPositionStore(): Promise<void> {
   }
   ensureRoot('white');
   ensureRoot('black');
-  await migrateMoveLabels();
-  await migrateComfortCoherence();
-  await migrateRootComment();
-}
 
-export function getRootFen(): string {
-  return STARTING_FEN;
 }
 
 export function getPosition(repertoire: Repertoire, fen: string): Position | undefined {

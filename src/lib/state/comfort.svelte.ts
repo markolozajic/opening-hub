@@ -1,7 +1,7 @@
 import type { ComfortLevel, Repertoire } from '../types';
 import { getPosition } from '../db/positionStore.svelte';
 import { getTurn } from '../utils/fen';
-import { COMFORT_SEVERITY } from '../constants';
+import { clearPrefix } from '../utils/helpers';
 import { labelData } from './labels.svelte';
 
 const comfortCache: Record<string, ComfortLevel | null> = {};
@@ -41,7 +41,7 @@ function aggregateComfort(
     return turn === ourSide ? Math.min(...childValues) : Math.max(...childValues);
   }
 
-  return pos.comfortLevel != null ? COMFORT_SEVERITY[pos.comfortLevel] : null;
+  return pos.comfortLevel != null ? PRIORITY_ORDER.indexOf(pos.comfortLevel) : null;
 }
 
 function computeComfortFor(repertoire: Repertoire, fen: string): ComfortLevel | null {
@@ -61,16 +61,6 @@ export function getComfort(repertoire: Repertoire, fen: string): ComfortLevel | 
   return result;
 }
 
-export function invalidateComfortCache(repertoire?: string, fen?: string): void {
-  if (repertoire) {
-    for (const key of Object.keys(comfortCache)) {
-      if (key.startsWith(`${repertoire}|`)) {
-        delete comfortCache[key];
-      }
-    }
-  } else {
-    for (const key of Object.keys(comfortCache)) {
-      delete comfortCache[key];
-    }
-  }
+export function invalidateComfortCache(repertoire?: string): void {
+  clearPrefix(comfortCache as Record<string, unknown>, repertoire);
 }

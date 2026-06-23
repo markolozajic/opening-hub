@@ -14,10 +14,6 @@ export function getTurn(fen: string): 'w' | 'b' {
   return fen.split(' ')[1] as 'w' | 'b';
 }
 
-export function getSideLabel(turn: 'w' | 'b'): string {
-  return turn === 'w' ? 'White to move' : 'Black to move';
-}
-
 export function cacheKey(repertoire: Repertoire, fen: string): string {
   return `${repertoire}|${fen}`;
 }

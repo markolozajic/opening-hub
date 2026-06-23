@@ -6,7 +6,7 @@
   import { nav, handleKeyDown, navigateTo } from './lib/state/navigation.svelte';
   import { invalidateComfortCache } from './lib/state/comfort.svelte';
   import { labelData, recomputeLabels } from './lib/state/labels.svelte';
-  import { getLegalMoves, findMoveBySquares, getPieceAt } from './lib/chess/boardUtils';
+  import { getLegalMoves, getPieceAt } from './lib/chess/boardUtils';
   import { getTurn, normalizeFen, toChessJsFen } from './lib/utils/fen';
   import { formatNumberedSan } from './lib/utils/positionUtils';
   import ChessBoard from './lib/components/ChessBoard.svelte';
@@ -100,7 +100,7 @@
         highlightedSquares = moves.filter(m => m.from === sq).map(m => m.to);
       }
     } else if (highlightedSquares.includes(sq)) {
-      const move = findMoveBySquares(displayFen, selectedSquare, sq);
+      const move = getLegalMoves(displayFen).find(m => m.from === selectedSquare && m.to === sq);
       if (move) {
         selectedSquare = null;
         highlightedSquares = [];

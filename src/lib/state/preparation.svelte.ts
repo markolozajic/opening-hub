@@ -317,8 +317,4 @@ export function selectOpponent(opponent: string | null): void {
   prepState.selectedOpponent = opponent;
 }
 
-export function formatOpponentName(name: string): string {
-  const comma = name.indexOf(', ');
-  if (comma === -1) return name;
-  return name.slice(comma + 2) + ' ' + name.slice(0, comma);
-}
+

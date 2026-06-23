@@ -4,11 +4,10 @@ import { STARTING_FEN } from '../lib/constants';
 import type { Position, Repertoire } from '../lib/types';
 import { makeRoot, makePos } from './helpers';
 
-const { mockPositionCache, mockGetRootFen, mockGetPosition } = vi.hoisted(() => {
+const { mockPositionCache, mockGetPosition } = vi.hoisted(() => {
   const cache: Record<string, Position> = {};
   return {
     mockPositionCache: cache,
-    mockGetRootFen: () => STARTING_FEN,
     mockGetPosition: (repertoire: Repertoire, fen: string) =>
       cache[cacheKey(repertoire, fen)],
   };
@@ -16,7 +15,6 @@ const { mockPositionCache, mockGetRootFen, mockGetPosition } = vi.hoisted(() => 
 
 vi.mock('../lib/db/positionStore.svelte', () => ({
   positionCache: mockPositionCache,
-  getRootFen: mockGetRootFen,
   getPosition: mockGetPosition,
 }));
 

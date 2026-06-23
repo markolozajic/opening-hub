@@ -5,7 +5,7 @@
   import { getNovelty } from '../state/novelty.svelte';
   import { invalidateComfortCache } from '../state/comfort.svelte';
   import { invalidateDrawCounts } from '../state/drawCounts.svelte';
-  import { getOpponentNames, tagPosition, untagPosition, getDirectlyTaggedOpponents, formatOpponentName } from '../state/preparation.svelte';
+  import { getOpponentNames, tagPosition, untagPosition, getDirectlyTaggedOpponents } from '../state/preparation.svelte';
   import { COMFORT_COLORS, COMFORT_LABELS } from '../constants';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import LinkList from './LinkList.svelte';
@@ -227,7 +227,7 @@
             <div class="tagged-list">
               {#each taggedAtPosition as entry}
                 <div class="tagged-item">
-                  <span class="tagged-name">{formatOpponentName(entry.name)}</span>
+                  <span class="tagged-name">{entry.name.includes(', ') ? entry.name.split(', ').reverse().join(' ') : entry.name}</span>
                   <button class="btn small-btn" onclick={() => handleUntagPosition(entry.name)}>Untag</button>
                 </div>
               {/each}

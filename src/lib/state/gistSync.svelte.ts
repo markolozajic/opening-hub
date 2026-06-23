@@ -90,7 +90,7 @@ export async function createGist(json?: string): Promise<string> {
   return data.id as string;
 }
 
-export async function pullFromGist(): Promise<string | null> {
+async function pullFromGist(): Promise<string | null> {
   const creds = credentials();
   if (!creds) return null;
 
@@ -219,7 +219,7 @@ async function mergeCloudIntoLocal(cloudJson: string): Promise<void> {
   });
 }
 
-export async function loadFromGist(): Promise<void> {
+async function loadFromGist(): Promise<void> {
   const creds = credentials();
   if (!creds) return;
 

@@ -1,6 +1,7 @@
 import type { Repertoire } from '../types';
 import { getPosition } from '../db/positionStore.svelte';
 import { getTurn } from '../utils/fen';
+import { clearPrefix } from '../utils/helpers';
 
 const drawCountsCache: Record<string, { forced: number; practical: number }> = {};
 
@@ -51,15 +52,5 @@ export function getDrawCounts(repertoire: Repertoire, fen: string): { forced: nu
 }
 
 export function invalidateDrawCounts(repertoire?: string): void {
-  if (repertoire) {
-    for (const key of Object.keys(drawCountsCache)) {
-      if (key.startsWith(`${repertoire}|`)) {
-        delete drawCountsCache[key];
-      }
-    }
-  } else {
-    for (const key of Object.keys(drawCountsCache)) {
-      delete drawCountsCache[key];
-    }
-  }
+  clearPrefix(drawCountsCache as Record<string, unknown>, repertoire);
 }
