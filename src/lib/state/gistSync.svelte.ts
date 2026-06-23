@@ -2,7 +2,8 @@ import { db } from '../db/schema';
 import { positionCache } from '../db/positionStore.svelte';
 import { toPlain } from '../utils/helpers';
 import { cacheKey } from '../utils/fen';
-import type { Position, PreparationRecord } from '../types';
+import type { Position, PreparationRecord, Repertoire } from '../types';
+import { loadFromDb } from './preparation.svelte';
 
 const GIST_TOKEN_KEY = 'openinghub_gist_token';
 const GIST_ID_KEY = 'openinghub_gist_id';
@@ -253,8 +254,10 @@ export async function saveToGist(): Promise<void> {
   }
 }
 
-export function initSync(): void {
+export async function initSync(): Promise<void> {
   readCreds();
   if (!syncState.hasGist) return;
-  loadFromGist();
+  await loadFromGist();
+  await loadFromDb('white');
+  await loadFromDb('black');
 }
