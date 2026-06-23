@@ -14,11 +14,11 @@ export class OpeningHubDB extends Dexie {
     });
     this.version(4).stores({
       positions: '[repertoire+fen], repertoire, fen, name, comfortLevel, updatedAt',
-      preparation: '[repertoire+player]',
+      preparation: '[repertoire+opponent]',
     });
     this.version(5).stores({
       positions: '[repertoire+fen], repertoire, fen, name, comfortLevel, updatedAt',
-      preparation: '[repertoire+player]',
+      preparation: '[repertoire+opponent]',
     });
     this.positions = this.table('positions');
     this.preparation = this.table('preparation');

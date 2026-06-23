@@ -5,15 +5,15 @@ import { STARTING_FEN } from '../constants';
 import { nav } from './navigation.svelte';
 
 export const prepState = $state({
-  selectedPlayer: null as string | null,
-  playerNames: [] as string[],
+  selectedOpponent: null as string | null,
+  opponentNames: [] as string[],
 });
 
 const taggedFens: Record<string, Set<string>> = {};
-const playerDates: Record<string, string> = {};
+const opponentDates: Record<string, string> = {};
 
-function repKey(repertoire: Repertoire, player: string): string {
-  return `${repertoire}|${player}`;
+function repKey(repertoire: Repertoire, opponent: string): string {
+  return `${repertoire}|${opponent}`;
 }
 
 function getAncestors(repertoire: Repertoire, fen: string): string[] {
@@ -73,8 +73,8 @@ function isEverybodyPly(repertoire: Repertoire, ply: number): boolean {
   return (repertoire === 'white' && ply <= 1) || (repertoire === 'black' && ply === 0);
 }
 
-function getTaggedChildren(repertoire: Repertoire, parentFen: string, player: string): string[] {
-  const rk = repKey(repertoire, player);
+function getTaggedChildren(repertoire: Repertoire, parentFen: string, opponent: string): string[] {
+  const rk = repKey(repertoire, opponent);
   const tSet = taggedFens[rk];
   if (!tSet) return [];
 
@@ -86,20 +86,20 @@ function getTaggedChildren(repertoire: Repertoire, parentFen: string, player: st
     .map(([san]) => san);
 }
 
-function syncPlayerNames(): void {
-  const players = new Set<string>();
+function syncOpponentNames(): void {
+  const names = new Set<string>();
   for (const key of Object.keys(taggedFens)) {
-    players.add(key.split('|')[1]);
+    names.add(key.split('|')[1]);
   }
-  prepState.playerNames = Array.from(players).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  prepState.opponentNames = Array.from(names).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 }
 
-export function addPlayer(repertoire: Repertoire, player: string): Promise<void> {
-  const rk = repKey(repertoire, player);
+export function addOpponent(repertoire: Repertoire, opponent: string): Promise<void> {
+  const rk = repKey(repertoire, opponent);
   if (taggedFens[rk]) return Promise.resolve();
   taggedFens[rk] = new Set();
-  playerDates[rk] = new Date().toISOString().slice(0, 10);
-  return db.preparation.put({ repertoire, player, taggedFens: [], updatedAt: playerDates[rk] }).then(syncPlayerNames);
+  opponentDates[rk] = new Date().toISOString().slice(0, 10);
+  return db.preparation.put({ repertoire, opponent, taggedFens: [], updatedAt: opponentDates[rk] }).then(syncOpponentNames);
 }
 
 export async function loadFromDb(repertoire: Repertoire): Promise<void> {
@@ -108,19 +108,19 @@ export async function loadFromDb(repertoire: Repertoire): Promise<void> {
   for (const key of Object.keys(taggedFens)) {
     if (key.startsWith(prefix)) delete taggedFens[key];
   }
-  for (const key of Object.keys(playerDates)) {
-    if (key.startsWith(prefix)) delete playerDates[key];
+  for (const key of Object.keys(opponentDates)) {
+    if (key.startsWith(prefix)) delete opponentDates[key];
   }
   const today = new Date().toISOString().slice(0, 10);
   for (const rec of records) {
-    taggedFens[repKey(repertoire, rec.player)] = new Set(rec.taggedFens);
-    playerDates[repKey(repertoire, rec.player)] = rec.updatedAt || today;
+    taggedFens[repKey(repertoire, rec.opponent)] = new Set(rec.taggedFens);
+    opponentDates[repKey(repertoire, rec.opponent)] = rec.updatedAt || today;
   }
-  syncPlayerNames();
+  syncOpponentNames();
 }
 
-export async function tagPosition(repertoire: Repertoire, fen: string, player: string): Promise<void> {
-  const rk = repKey(repertoire, player);
+export async function tagPosition(repertoire: Repertoire, fen: string, opponent: string): Promise<void> {
+  const rk = repKey(repertoire, opponent);
   if (!taggedFens[rk]) taggedFens[rk] = new Set();
   if (taggedFens[rk].has(fen)) return;
 
@@ -138,12 +138,12 @@ export async function tagPosition(repertoire: Repertoire, fen: string, player: s
     }
   }
 
-  await db.preparation.put({ repertoire, player, taggedFens: Array.from(taggedFens[rk]), updatedAt: playerDates[rk] });
-  syncPlayerNames();
+  await db.preparation.put({ repertoire, opponent, taggedFens: Array.from(taggedFens[rk]), updatedAt: opponentDates[rk] });
+  syncOpponentNames();
 }
 
-export async function untagPosition(repertoire: Repertoire, fen: string, player: string): Promise<void> {
-  const rk = repKey(repertoire, player);
+export async function untagPosition(repertoire: Repertoire, fen: string, opponent: string): Promise<void> {
+  const rk = repKey(repertoire, opponent);
   if (!taggedFens[rk]) return;
   taggedFens[rk].delete(fen);
   const descendants = getDescendants(repertoire, fen);
@@ -152,27 +152,27 @@ export async function untagPosition(repertoire: Repertoire, fen: string, player:
   }
   if (taggedFens[rk].size === 0) {
     delete taggedFens[rk];
-    delete playerDates[rk];
-    await db.preparation.delete([repertoire, player]);
+    delete opponentDates[rk];
+    await db.preparation.delete([repertoire, opponent]);
   } else {
-    await db.preparation.put({ repertoire, player, taggedFens: Array.from(taggedFens[rk]), updatedAt: playerDates[rk] });
+    await db.preparation.put({ repertoire, opponent, taggedFens: Array.from(taggedFens[rk]), updatedAt: opponentDates[rk] });
   }
-  syncPlayerNames();
+  syncOpponentNames();
 }
 
-export async function purgePlayer(repertoire: Repertoire, player: string): Promise<void> {
-  const rk = repKey(repertoire, player);
+export async function purgeOpponent(repertoire: Repertoire, opponent: string): Promise<void> {
+  const rk = repKey(repertoire, opponent);
   delete taggedFens[rk];
-  delete playerDates[rk];
-  await db.preparation.delete([repertoire, player]);
-  if (prepState.selectedPlayer === player) {
-    prepState.selectedPlayer = null;
+  delete opponentDates[rk];
+  await db.preparation.delete([repertoire, opponent]);
+  if (prepState.selectedOpponent === opponent) {
+    prepState.selectedOpponent = null;
   }
-  syncPlayerNames();
+  syncOpponentNames();
 }
 
-function isConnected(repertoire: Repertoire, fen: string, player: string): boolean {
-  const rk = repKey(repertoire, player);
+function isConnected(repertoire: Repertoire, fen: string, opponent: string): boolean {
+  const rk = repKey(repertoire, opponent);
   const tSet = taggedFens[rk];
   if (!tSet || tSet.size === 0) return false;
   for (const t of tSet) {
@@ -181,8 +181,8 @@ function isConnected(repertoire: Repertoire, fen: string, player: string): boole
   return false;
 }
 
-export function getPlayersAt(repertoire: Repertoire, fen: string): { name: string; certain: boolean }[] {
-  void prepState.playerNames;
+export function getOpponentsAt(repertoire: Repertoire, fen: string): { name: string; certain: boolean }[] {
+  void prepState.opponentNames;
   const prefix = repertoire + '|';
   const result: { name: string; certain: boolean }[] = [];
 
@@ -206,18 +206,18 @@ export function getPlayersAt(repertoire: Repertoire, fen: string): { name: strin
 
   for (const rk of Object.keys(taggedFens)) {
     if (!rk.startsWith(prefix)) continue;
-    const player = rk.split('|')[1];
+    const opponent = rk.split('|')[1];
     const tSet = taggedFens[rk];
     if (!tSet || tSet.size === 0) continue;
 
     // 1. Direct tag at this FEN
     if (tSet.has(fen)) {
-      result.push({ name: player, certain: true });
+      result.push({ name: opponent, certain: true });
       continue;
     }
 
     // 2. Deviation check: walk every step of the path. When a position has any
-    //    child in the player's taggedFens but the actual child isn't one of them:
+    //    child in the opponent's taggedFens but the actual child isn't one of them:
     //    - player's turn → player deviated (uncertain, but still reachable)
     //    - opponent's turn → opponent deviated (not reachable at all)
     let playerDeviated = false;
@@ -242,42 +242,42 @@ export function getPlayersAt(repertoire: Repertoire, fen: string): { name: strin
     if (opponentDeviated) continue;
 
     const certain = !playerDeviated && Array.from(tSet).some(t => descendantSet.has(t));
-    result.push({ name: player, certain });
+    result.push({ name: opponent, certain });
   }
 
   return result.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 }
 
-export function getDirectlyTaggedPlayers(repertoire: Repertoire, fen: string): string[] {
-  void prepState.playerNames;
+export function getDirectlyTaggedOpponents(repertoire: Repertoire, fen: string): string[] {
+  void prepState.opponentNames;
   const result: string[] = [];
   const prefix = repertoire + '|';
   for (const rk of Object.keys(taggedFens)) {
     if (!rk.startsWith(prefix)) continue;
-    const player = rk.split('|')[1];
+    const opponent = rk.split('|')[1];
     if (taggedFens[rk]!.has(fen)) {
-      result.push(player);
+      result.push(opponent);
     }
   }
   return result.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 }
 
-export function nextSansForPath(repertoire: Repertoire, navPath: string[], player: string): string[] | null {
-  void prepState.playerNames;
-  const rk = repKey(repertoire, player);
+export function nextSansForPath(repertoire: Repertoire, navPath: string[], opponent: string): string[] | null {
+  void prepState.opponentNames;
+  const rk = repKey(repertoire, opponent);
   const tSet = taggedFens[rk];
   if (!tSet || tSet.size === 0) return [];
 
   const fen = navPath.length > 0 ? navByPath(repertoire, navPath) : STARTING_FEN;
   if (!fen) return [];
 
-  if (!isConnected(repertoire, fen, player)) return [];
+  if (!isConnected(repertoire, fen, opponent)) return [];
 
   const evenLen = navPath.length % 2 === 0;
   const ourTurn = (repertoire === 'white' && evenLen) || (repertoire === 'black' && !evenLen);
   if (ourTurn) return null;
 
-  const childSans = getTaggedChildren(repertoire, fen, player);
+  const childSans = getTaggedChildren(repertoire, fen, opponent);
   if (childSans.length > 0) return childSans;
 
   const pos = getPosition(repertoire, fen);
@@ -298,30 +298,26 @@ function navByPath(repertoire: Repertoire, navPath: string[]): string | null {
   return fen;
 }
 
-export function getPlayers(): string[] {
-  return prepState.playerNames;
+export function getOpponentNames(): string[] {
+  return prepState.opponentNames;
 }
 
-export function getPlayerDate(repertoire: Repertoire, player: string): string | undefined {
-  return playerDates[repKey(repertoire, player)];
+export function getOpponentDate(repertoire: Repertoire, opponent: string): string | undefined {
+  return opponentDates[repKey(repertoire, opponent)];
 }
 
-export async function refreshPlayerDate(repertoire: Repertoire, player: string): Promise<void> {
-  const rk = repKey(repertoire, player);
+export async function refreshOpponentDate(repertoire: Repertoire, opponent: string): Promise<void> {
+  const rk = repKey(repertoire, opponent);
   if (!taggedFens[rk]) return;
-  playerDates[rk] = new Date().toISOString().slice(0, 10);
-  await db.preparation.put({ repertoire, player, taggedFens: Array.from(taggedFens[rk]), updatedAt: playerDates[rk] });
+  opponentDates[rk] = new Date().toISOString().slice(0, 10);
+  await db.preparation.put({ repertoire, opponent, taggedFens: Array.from(taggedFens[rk]), updatedAt: opponentDates[rk] });
 }
 
-export function selectPlayer(player: string | null): void {
-  prepState.selectedPlayer = player;
+export function selectOpponent(opponent: string | null): void {
+  prepState.selectedOpponent = opponent;
 }
 
-export function isPlayerSelected(): boolean {
-  return prepState.selectedPlayer !== null;
-}
-
-export function formatPlayerName(name: string): string {
+export function formatOpponentName(name: string): string {
   const comma = name.indexOf(', ');
   if (comma === -1) return name;
   return name.slice(comma + 2) + ' ' + name.slice(0, comma);

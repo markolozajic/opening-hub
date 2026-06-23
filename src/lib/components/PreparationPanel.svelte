@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getPlayers, selectPlayer, prepState, purgePlayer, formatPlayerName, addPlayer, getPlayerDate, refreshPlayerDate } from '../state/preparation.svelte';
+  import { getOpponentNames, selectOpponent, prepState, purgeOpponent, formatOpponentName, addOpponent, getOpponentDate, refreshOpponentDate } from '../state/preparation.svelte';
   import { nav } from '../state/navigation.svelte';
   import { Plus, Trash2, X, RefreshCw } from '@lucide/svelte';
 
@@ -7,13 +7,13 @@
   let showDropdown = $state(false);
   let inputRef = $state<HTMLInputElement | null>(null);
 
-  let allPlayers = $derived(getPlayers());
+  let allOpponents = $derived(getOpponentNames());
   let matches = $derived(
     input.trim()
-      ? allPlayers.filter(p => p.toLowerCase().includes(input.trim().toLowerCase()))
-      : allPlayers
+      ? allOpponents.filter(p => p.toLowerCase().includes(input.trim().toLowerCase()))
+      : allOpponents
   );
-  let dateAdded = $derived(prepState.selectedPlayer ? getPlayerDate(nav.activeRepertoire, prepState.selectedPlayer) : undefined);
+  let dateAdded = $derived(prepState.selectedOpponent ? getOpponentDate(nav.activeRepertoire, prepState.selectedOpponent) : undefined);
 
   function handleFocus() {
     showDropdown = true;
@@ -28,7 +28,7 @@
   }
 
   function handleSelect(name: string) {
-    selectPlayer(name);
+    selectOpponent(name);
     input = '';
     showDropdown = false;
     inputRef?.blur();
@@ -37,11 +37,11 @@
   async function handleAddOrSelect() {
     const q = input.trim();
     if (!q) return;
-    const exact = allPlayers.find(p => p.toLowerCase() === q.toLowerCase());
+    const exact = allOpponents.find(p => p.toLowerCase() === q.toLowerCase());
     if (exact) {
       handleSelect(exact);
     } else {
-      await addPlayer(nav.activeRepertoire, q);
+      await addOpponent(nav.activeRepertoire, q);
       input = '';
       showDropdown = false;
     }
@@ -53,9 +53,9 @@
     handleAddOrSelect();
   }
 
-  async function handleRemovePlayer(name: string) {
+  async function handleRemoveOpponent(name: string) {
     if (confirm(`Permanently remove ${name} from the repertoire? All tagged paths will be deleted.`)) {
-      await purgePlayer(nav.activeRepertoire, name);
+      await purgeOpponent(nav.activeRepertoire, name);
     }
   }
 </script>
@@ -82,14 +82,14 @@
     {#if showDropdown}
       <div class="dropdown">
         {#if matches.length > 0}
-          {#each matches as player}
+          {#each matches as opponent}
             <button
               class="drop-item"
-              class:selected={prepState.selectedPlayer === player}
-              onclick={() => handleSelect(player)}
+              class:selected={prepState.selectedOpponent === opponent}
+              onclick={() => handleSelect(opponent)}
             >
-              <span class="drop-name">{player}</span>
-              {#if prepState.selectedPlayer === player}
+              <span class="drop-name">{opponent}</span>
+              {#if prepState.selectedOpponent === opponent}
                 <span class="drop-badge">filtering</span>
               {/if}
             </button>
@@ -103,20 +103,20 @@
     {/if}
   </div>
 
-  {#if prepState.selectedPlayer}
+  {#if prepState.selectedOpponent}
     <div class="filter-bar">
-      <span class="filter-label">Filtering by <strong>{formatPlayerName(prepState.selectedPlayer)}</strong></span>
+      <span class="filter-label">Filtering by <strong>{formatOpponentName(prepState.selectedOpponent)}</strong></span>
       <div class="filter-actions">
         {#if dateAdded}
           <span class="filter-date">Repertoire last checked: {dateAdded}</span>
         {/if}
-        <button class="btn icon-btn" onclick={() => refreshPlayerDate(nav.activeRepertoire, prepState.selectedPlayer!)} title="Refresh date">
+        <button class="btn icon-btn" onclick={() => refreshOpponentDate(nav.activeRepertoire, prepState.selectedOpponent!)} title="Refresh date">
           <RefreshCw size={13} />
         </button>
-        <button class="btn icon-btn" onclick={() => handleRemovePlayer(prepState.selectedPlayer!)} title="Remove player">
+        <button class="btn icon-btn" onclick={() => handleRemoveOpponent(prepState.selectedOpponent!)} title="Remove opponent">
           <Trash2 size={13} />
         </button>
-        <button class="btn icon-btn" onclick={() => { selectPlayer(null); input = ''; }} title="Clear filter">
+        <button class="btn icon-btn" onclick={() => { selectOpponent(null); input = ''; }} title="Clear filter">
           <X size={13} />
         </button>
       </div>

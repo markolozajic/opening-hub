@@ -5,7 +5,7 @@
   import { getNovelty } from '../state/novelty.svelte';
   import { invalidateComfortCache } from '../state/comfort.svelte';
   import { invalidateDrawCounts } from '../state/drawCounts.svelte';
-  import { getPlayers, tagPosition, untagPosition, getDirectlyTaggedPlayers, formatPlayerName } from '../state/preparation.svelte';
+  import { getOpponentNames, tagPosition, untagPosition, getDirectlyTaggedOpponents, formatOpponentName } from '../state/preparation.svelte';
   import { COMFORT_COLORS, COMFORT_LABELS } from '../constants';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import LinkList from './LinkList.svelte';
@@ -28,15 +28,15 @@
   let previewMode = $state(false);
   let saving = $state(false);
 
-  let tagPlayer = $state('');
-  let taggablePlayers = $derived(position ? getPlayers() : []);
+  let tagOpponent = $state('');
+  let taggableOpponents = $derived(position ? getOpponentNames() : []);
   let turn = $derived(position ? position.fen.split(' ')[1] as 'w' | 'b' || 'w' : 'w');
   let isOurTurn = $derived(
     position && ((nav.activeRepertoire === 'white' && turn === 'w') || (nav.activeRepertoire === 'black' && turn === 'b'))
   );
   let taggedAtPosition = $derived(
     position && isOurTurn
-      ? getDirectlyTaggedPlayers(nav.activeRepertoire, position.fen)
+      ? getDirectlyTaggedOpponents(nav.activeRepertoire, position.fen)
           .map(p => ({ name: p }))
       : []
   );
@@ -133,14 +133,14 @@
   }
 
   async function handleTagPosition() {
-    if (!position || !tagPlayer.trim()) return;
-    await tagPosition(nav.activeRepertoire, position.fen, tagPlayer.trim());
-    tagPlayer = '';
+    if (!position || !tagOpponent.trim()) return;
+    await tagPosition(nav.activeRepertoire, position.fen, tagOpponent.trim());
+    tagOpponent = '';
   }
 
-  async function handleUntagPosition(playerName: string) {
+  async function handleUntagPosition(opponentName: string) {
     if (!position) return;
-    await untagPosition(nav.activeRepertoire, position.fen, playerName);
+    await untagPosition(nav.activeRepertoire, position.fen, opponentName);
   }
 
   async function handleAddLink(link: Link) {
@@ -210,24 +210,24 @@
         <div class="tag-section">
           <div class="tag-row">
             <input
-              bind:value={tagPlayer}
+              bind:value={tagOpponent}
               class="input"
               placeholder="Player name…"
-              list="tag-players"
+              list="tag-opponents"
               onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleTagPosition(); } }}
             />
-            <datalist id="tag-players">
-              {#each taggablePlayers as p}
+            <datalist id="tag-opponents">
+              {#each taggableOpponents as p}
                 <option value={p}></option>
               {/each}
             </datalist>
-            <button class="btn" onclick={handleTagPosition} disabled={!tagPlayer.trim()}>Tag</button>
+            <button class="btn" onclick={handleTagPosition} disabled={!tagOpponent.trim()}>Tag</button>
           </div>
           {#if taggedAtPosition.length > 0}
             <div class="tagged-list">
               {#each taggedAtPosition as entry}
                 <div class="tagged-item">
-                  <span class="tagged-name">{formatPlayerName(entry.name)}</span>
+                  <span class="tagged-name">{formatOpponentName(entry.name)}</span>
                   <button class="btn small-btn" onclick={() => handleUntagPosition(entry.name)}>Untag</button>
                 </div>
               {/each}

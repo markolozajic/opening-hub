@@ -13,7 +13,7 @@
   import MiniBoard from './MiniBoard.svelte';
   import ComfortBadge from './ComfortBadge.svelte';
   import { navigateTo, navigatePath } from '../state/navigation.svelte';
-  import { prepState, nextSansForPath, selectPlayer, formatPlayerName, tagPosition, untagPosition, getPlayers, getDirectlyTaggedPlayers } from '../state/preparation.svelte';
+  import { prepState, nextSansForPath, selectOpponent, formatOpponentName, tagPosition, untagPosition, getOpponentNames, getDirectlyTaggedOpponents } from '../state/preparation.svelte';
   import { Trash2, GripVertical, Eye, X, Pencil } from '@lucide/svelte';
 
   let {
@@ -26,8 +26,8 @@
   let position = $derived(getPosition(nav.activeRepertoire, nav.currentFen));
 
   let allowedSans = $derived(
-    prepState.selectedPlayer
-      ? nextSansForPath(nav.activeRepertoire, nav.currentPath.map(s => s.san), prepState.selectedPlayer)
+    prepState.selectedOpponent
+      ? nextSansForPath(nav.activeRepertoire, nav.currentPath.map(s => s.san), prepState.selectedOpponent)
       : null
   );
 
@@ -162,10 +162,10 @@
   let editIsLeaf = $state(false);
   let editShowLabel = $state(false);
   let metaDialogRef = $state<HTMLDialogElement | null>(null);
-  let metaTagPlayer = $state('');
-  let metaTaggablePlayers = $derived(editToFen ? getPlayers() : []);
+  let metaTagOpponent = $state('');
+  let metaTaggableOpponents = $derived(editToFen ? getOpponentNames() : []);
   let metaTaggedAtPosition = $derived(
-    editToFen ? getDirectlyTaggedPlayers(nav.activeRepertoire, editToFen) : []
+    editToFen ? getDirectlyTaggedOpponents(nav.activeRepertoire, editToFen) : []
   );
 
   let availableLabels = $derived.by(() => {
@@ -242,22 +242,22 @@
   }
 
   async function handleMetaTag() {
-    if (!metaTagPlayer.trim() || !editToFen) return;
-    await tagPosition(nav.activeRepertoire, editToFen, metaTagPlayer.trim());
-    metaTagPlayer = '';
+    if (!metaTagOpponent.trim() || !editToFen) return;
+    await tagPosition(nav.activeRepertoire, editToFen, metaTagOpponent.trim());
+    metaTagOpponent = '';
   }
 
-  async function handleMetaUntag(player: string) {
+  async function handleMetaUntag(opponent: string) {
     if (!editToFen) return;
-    await untagPosition(nav.activeRepertoire, editToFen, player);
+    await untagPosition(nav.activeRepertoire, editToFen, opponent);
   }
 </script>
 
 <div class="move-list">
-  {#if prepState.selectedPlayer}
-    <div class="player-filter-banner">
-      <span class="player-filter-label">PLAYER FILTER: {formatPlayerName(prepState.selectedPlayer)}</span>
-      <button class="banner-clear-btn" onclick={() => selectPlayer(null)} title="Clear player filter">
+  {#if prepState.selectedOpponent}
+    <div class="opponent-filter-banner">
+      <span class="opponent-filter-label">PLAYER FILTER: {formatOpponentName(prepState.selectedOpponent)}</span>
+      <button class="banner-clear-btn" onclick={() => selectOpponent(null)} title="Clear player filter">
         <X size={12} /> Clear
       </button>
     </div>
@@ -271,7 +271,7 @@
     </div>
   </div>
   {#if sortedMoves.length === 0}
-    <p class="empty">{prepState.selectedPlayer ? `No moves by ${formatPlayerName(prepState.selectedPlayer)} at this position.` : 'No moves added yet. Click a piece on the board.'}</p>
+    <p class="empty">{prepState.selectedOpponent ? `No moves by ${formatOpponentName(prepState.selectedOpponent)} at this position.` : 'No moves added yet. Click a piece on the board.'}</p>
   {:else}
     <div class="moves" role="list">
       {#each numberedMoves as move, i}
@@ -426,24 +426,22 @@
           <span class="dialog-section-title">Tag position</span>
           <div class="tag-row-centered">
             <input
-              bind:value={metaTagPlayer}
+              bind:value={metaTagOpponent}
               class="meta-input"
               placeholder="Player…"
-              list="meta-tag-players"
-              onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleMetaTag(); } }}
-            />
-            <datalist id="meta-tag-players">
-              {#each metaTaggablePlayers as p}
+              list="meta-tag-opponents" />
+            <datalist id="meta-tag-opponents">
+              {#each metaTaggableOpponents as p}
                 <option value={p}></option>
               {/each}
             </datalist>
-            <button class="meta-btn" onclick={handleMetaTag} disabled={!metaTagPlayer.trim()}>Tag</button>
+            <button class="meta-btn" onclick={handleMetaTag} disabled={!metaTagOpponent.trim()}>Tag</button>
           </div>
           {#if metaTaggedAtPosition.length > 0}
             <div class="meta-tagged-list">
               {#each metaTaggedAtPosition as p}
                 <span class="meta-tag-item">
-                  {formatPlayerName(p)}
+                  {formatOpponentName(p)}
                   <button class="meta-untag-btn" onclick={() => handleMetaUntag(p)}>x</button>
                 </span>
               {/each}
@@ -532,12 +530,12 @@
   .title-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
   .title { margin: 0; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
   .title-actions { display: flex; align-items: center; gap: 0.25rem; }
-  .player-filter-banner {
+  .opponent-filter-banner {
     display: flex; align-items: center; justify-content: space-between;
     padding: 0.375rem 0.5rem; border-radius: 4px; background: var(--accent-bg);
     border: 1px solid var(--accent);
   }
-  .player-filter-label {
+  .opponent-filter-label {
     font-size: 0.75rem; font-weight: 600; color: var(--accent);
   }
   .banner-clear-btn {

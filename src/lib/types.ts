@@ -46,7 +46,7 @@ export interface Position {
 
 export interface PreparationRecord {
   repertoire: Repertoire;
-  player: string;
+  opponent: string;
   taggedFens: string[];
   updatedAt?: string;
 }

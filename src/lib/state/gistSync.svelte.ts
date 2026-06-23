@@ -185,12 +185,12 @@ async function mergeCloudIntoLocal(cloudJson: string): Promise<void> {
 
   const cloudPrepMap = new Map<string, PreparationRecord>();
   for (const pr of cloudPrep) {
-    cloudPrepMap.set(`${pr.repertoire}|${pr.player}`, pr);
+    cloudPrepMap.set(`${pr.repertoire}|${pr.opponent}`, pr);
   }
 
   const localPrepMap = new Map<string, PreparationRecord>();
   for (const pr of localPrep) {
-    localPrepMap.set(`${pr.repertoire}|${pr.player}`, pr);
+    localPrepMap.set(`${pr.repertoire}|${pr.opponent}`, pr);
   }
 
   const allPrepKeys = new Set([...cloudPrepMap.keys(), ...localPrepMap.keys()]);

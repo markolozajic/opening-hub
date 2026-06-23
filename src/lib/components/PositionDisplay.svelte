@@ -4,7 +4,7 @@
   import { getSideLabel } from '../utils/fen';
   import { getComfort } from '../state/comfort.svelte';
   import { getNovelty } from '../state/novelty.svelte';
-  import { getPlayersAt, prepState, formatPlayerName } from '../state/preparation.svelte';
+  import { getOpponentsAt, prepState, formatOpponentName } from '../state/preparation.svelte';
   import { pgnView } from '../state/pgnView.svelte';
   import { getDrawCounts } from '../state/drawCounts.svelte';
   import ComfortBadge from './ComfortBadge.svelte';
@@ -24,7 +24,7 @@
   let turn = $derived(position ? getSideLabel(position.fen.split(' ')[1] as 'w' | 'b' || 'w') : '');
   let isNovel = $derived(fen ? getNovelty(nav.activeRepertoire, fen) : false);
   let drawCounts = $derived(fen ? getDrawCounts(nav.activeRepertoire, fen) : { forced: 0, practical: 0 });
-  let displayPlayers = $derived<{ name: string; certain: boolean }[]>(fen ? getPlayersAt(nav.activeRepertoire, fen) : []);
+  let displayOpponents = $derived<{ name: string; certain: boolean }[]>(fen ? getOpponentsAt(nav.activeRepertoire, fen) : []);
   let isEverybody = $derived(
     (nav.activeRepertoire === 'white' && nav.currentPath.length <= 1) ||
     (nav.activeRepertoire === 'black' && nav.currentPath.length === 0)
@@ -56,16 +56,16 @@
     </div>
 
     <div class="section">
-      <p class="players-line">
+      <p class="opponents-line">
         Played by:
         {#if isEverybody}
           <span class="everybody">everybody</span>
-        {:else if displayPlayers.length > 0}
-          {#each displayPlayers as p, i}
-            <span class="player-name" class:selected-player={p.name === prepState.selectedPlayer}>{formatPlayerName(p.name)}{#if !p.certain}?{/if}</span>{i < displayPlayers.length - 1 ? ', ' : ''}
+        {:else if displayOpponents.length > 0}
+          {#each displayOpponents as p, i}
+            <span class="opponent-name" class:selected-opponent={p.name === prepState.selectedOpponent}>{formatOpponentName(p.name)}{#if !p.certain}?{/if}</span>{i < displayOpponents.length - 1 ? ', ' : ''}
           {/each}
         {:else}
-          <span class="no-players">nobody</span>
+          <span class="no-opponents">nobody</span>
         {/if}
       </p>
     </div>
@@ -127,10 +127,10 @@
     letter-spacing: 0.05em; color: var(--muted);
   }
   .empty { color: var(--muted); font-style: italic; font-size: 0.8125rem; }
-  .players-line { margin: 0; font-size: 0.8125rem; line-height: 1.5; color: var(--text); }
-  .player-name { font-weight: 500; }
-  .player-name.selected-player { color: var(--accent); font-weight: 600; }
-  .no-players { font-style: italic; color: var(--muted); }
+  .opponents-line { margin: 0; font-size: 0.8125rem; line-height: 1.5; color: var(--text); }
+  .opponent-name { font-weight: 500; }
+  .opponent-name.selected-opponent { color: var(--accent); font-weight: 600; }
+  .no-opponents { font-style: italic; color: var(--muted); }
   .draw-info { margin: 0; font-size: 0.8125rem; line-height: 1.5; }
   .draw-info.forced { color: #ef4444; }
   .draw-info.practical { color: #ca8a04; }
