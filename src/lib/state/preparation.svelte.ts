@@ -207,21 +207,21 @@ export function getPlayersAt(repertoire: Repertoire, fen: string): { name: strin
     }
 
     // 2. Deviation check: at each position on the path where it's the player's
-    //    turn, if they have tagged children but the actual child isn't one,
-    //    the player deviated — this position is not reachable for them
+    //    turn, if they have any tagged child at that position but the actual
+    //    child isn't one of them, the player deviated — this position is not
+    //    reachable for them
     let deviated = false;
     for (let i = 0; i < path.length - 1; i++) {
       const isPlayerTurn = (repertoire === 'white' && i % 2 === 1) || (repertoire === 'black' && i % 2 === 0);
       if (!isPlayerTurn) continue;
 
-      const taggedChildren = getTaggedChildren(repertoire, path[i], player);
-      if (taggedChildren.length === 0) continue;
-
       const pos = getPosition(repertoire, path[i]);
       if (!pos) continue;
 
-      const childSan = Object.entries(pos.moves).find(([, edge]) => edge.toFen === path[i + 1])?.[0];
-      if (childSan && !taggedChildren.includes(childSan)) {
+      const hasTaggedChild = Object.values(pos.moves).some(edge => tSet.has(edge.toFen));
+      if (!hasTaggedChild) continue;
+
+      if (!tSet.has(path[i + 1])) {
         deviated = true;
         break;
       }
