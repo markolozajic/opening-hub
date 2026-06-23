@@ -206,36 +206,32 @@ export function getPlayersAt(repertoire: Repertoire, fen: string): { name: strin
       continue;
     }
 
-    // // 2. Deviation check: at each position on the path where it's the player's
-    // //    turn, if they have any tagged child at that position but the actual
-    // //    child isn't one of them, the player deviated — this position is not
-    // //    reachable for them
-    // let deviated = false;
-    // for (let i = 0; i < path.length - 1; i++) {
-    //   const isPlayerTurn = (repertoire === 'white' && i % 2 === 1) || (repertoire === 'black' && i % 2 === 0);
-    //   if (!isPlayerTurn) continue;
+    // 2. Deviation check: at each position on the path where it's the player's
+    //    turn, if they have any tagged child at that position but the actual
+    //    child isn't one of them, the player deviated — this position is not
+    //    reachable for them
+    let deviated = false;
+    for (let i = 0; i < path.length - 1; i++) {
+      const isPlayerTurn = (repertoire === 'white' && i % 2 === 1) || (repertoire === 'black' && i % 2 === 0);
+      if (!isPlayerTurn) continue;
 
-    //   const pos = getPosition(repertoire, path[i]);
-    //   if (!pos) continue;
+      const pos = getPosition(repertoire, path[i]);
+      if (!pos) continue;
 
-    //   const hasTaggedChild = Object.values(pos.moves).some(edge => tSet.has(edge.toFen));
-    //   if (!hasTaggedChild) continue;
+      const hasTaggedChild = Object.values(pos.moves).some(edge => tSet.has(edge.toFen));
+      if (!hasTaggedChild) continue;
 
-    //   if (!tSet.has(path[i + 1])) {
-    //     deviated = true;
-    //     break;
-    //   }
-    // }
-    // if (deviated) result.push({ name: player, certain: false });
+      if (!tSet.has(path[i + 1])) {
+        deviated = true;
+        break;
+      }
+    }
+    if (deviated) result.push({ name: player, certain: false });
 
     // 3. Reachable and on the path to a tagged position (fen is ancestor of a taggedFen)
     if (Array.from(tSet).some(t => descendantSet.has(t))) {
       result.push({ name: player, certain: true });
-      continue;
     }
-
-    // 4. Reachable but hypothetical (beyond known territory from this player)
-    result.push({ name: player, certain: false });
   }
 
   return result.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
