@@ -113,6 +113,7 @@ export async function loadFromDb(repertoire: Repertoire): Promise<void> {
   }
   const today = new Date().toISOString().slice(0, 10);
   for (const rec of records) {
+    if (!rec.opponent) continue;
     taggedFens[repKey(repertoire, rec.opponent)] = new Set(rec.taggedFens);
     opponentDates[repKey(repertoire, rec.opponent)] = rec.updatedAt || today;
   }
@@ -339,9 +340,5 @@ export async function migrateOldPreparationData(): Promise<void> {
         });
       }
     }
-  }
-  const reps: Repertoire[] = ['white', 'black'];
-  for (const rep of reps) {
-    await db.preparation.where('repertoire').equals(rep).filter(r => !r.opponent).delete();
   }
 }

@@ -51,12 +51,12 @@
 
   onMount(async () => {
     await initPositionStore();
-    await loadFromDb('white');
-    await initSync();
     if (!localStorage.getItem('openinghub_opponent_migrated')) {
       await migrateOldPreparationData();
       localStorage.setItem('openinghub_opponent_migrated', '1');
     }
+    await loadFromDb('white');
+    await initSync();
     initialized = true;
   });
 
