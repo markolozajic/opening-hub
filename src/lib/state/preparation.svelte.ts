@@ -322,3 +322,26 @@ export function formatOpponentName(name: string): string {
   if (comma === -1) return name;
   return name.slice(comma + 2) + ' ' + name.slice(0, comma);
 }
+
+// One-off migration: old data has `player` field instead of `opponent`.
+// Run once from browser console, then delete this function.
+export async function migrateOldPreparationData(): Promise<void> {
+  const records = await db.preparation.toArray();
+  for (const rec of records) {
+    if (!rec.opponent) {
+      const oldPlayer = (rec as any).player;
+      if (oldPlayer) {
+        await db.preparation.put({
+          repertoire: rec.repertoire,
+          opponent: oldPlayer,
+          taggedFens: rec.taggedFens,
+          updatedAt: rec.updatedAt,
+        });
+      }
+    }
+  }
+  const reps: Repertoire[] = ['white', 'black'];
+  for (const rep of reps) {
+    await db.preparation.where('repertoire').equals(rep).filter(r => !r.opponent).delete();
+  }
+}
