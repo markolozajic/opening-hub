@@ -184,34 +184,58 @@ function isConnected(repertoire: Repertoire, fen: string, player: string): boole
 export function getPlayersAt(repertoire: Repertoire, fen: string): { name: string; certain: boolean }[] {
   void prepState.playerNames;
   const prefix = repertoire + '|';
-  const direct: string[] = [];
-  const candidates: string[] = [];
+  const result: { name: string; certain: boolean }[] = [];
+
+  if (fen === STARTING_FEN) return result;
+
+  const ancestors = getAncestors(repertoire, fen);
+  ancestors.reverse();
+  const path = [...ancestors, fen];
+  const descendants = getDescendants(repertoire, fen);
+  const descendantSet = new Set(descendants);
 
   for (const rk of Object.keys(taggedFens)) {
     if (!rk.startsWith(prefix)) continue;
     const player = rk.split('|')[1];
     const tSet = taggedFens[rk];
     if (!tSet || tSet.size === 0) continue;
+
+    // 1. Direct tag at this FEN
     if (tSet.has(fen)) {
-      direct.push(player);
-    } else {
-      candidates.push(player);
+      result.push({ name: player, certain: true });
+      continue;
     }
-  }
 
-  const result: { name: string; certain: boolean }[] = direct.map(p => ({ name: p, certain: true }));
+    // 2. Deviation check: at each position on the path where it's the player's
+    //    turn, if they have tagged children but the actual child isn't one,
+    //    the player deviated — this position is not reachable for them
+    let deviated = false;
+    for (let i = 0; i < path.length - 1; i++) {
+      const isPlayerTurn = (repertoire === 'white' && i % 2 === 1) || (repertoire === 'black' && i % 2 === 0);
+      if (!isPlayerTurn) continue;
 
-  if (candidates.length > 0 && fen !== STARTING_FEN) {
-    const ancestors = getAncestors(repertoire, fen);
-    for (const player of candidates) {
-      const rk = repKey(repertoire, player);
-      for (const t of taggedFens[rk]!) {
-        if (ancestors.includes(t)) {
-          result.push({ name: player, certain: false });
-          break;
-        }
+      const taggedChildren = getTaggedChildren(repertoire, path[i], player);
+      if (taggedChildren.length === 0) continue;
+
+      const pos = getPosition(repertoire, path[i]);
+      if (!pos) continue;
+
+      const childSan = Object.entries(pos.moves).find(([, edge]) => edge.toFen === path[i + 1])?.[0];
+      if (childSan && !taggedChildren.includes(childSan)) {
+        deviated = true;
+        break;
       }
     }
+    if (deviated) continue;
+
+    // 3. Reachable and on the path to a tagged position (fen is ancestor of a taggedFen)
+    if (Array.from(tSet).some(t => descendantSet.has(t))) {
+      result.push({ name: player, certain: true });
+      continue;
+    }
+
+    // 4. Reachable but hypothetical (beyond known territory from this player)
+    result.push({ name: player, certain: false });
   }
 
   return result.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));

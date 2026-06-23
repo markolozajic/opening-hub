@@ -21,7 +21,7 @@ A client-side chess opening repertoire manager. Build and maintain your opening 
 - **Export** — export main line as PGN or full repertoire as JSON backup
 - **Cleanup** — find and remove positions no longer reachable from the root
 - **Fully client-side** — all data stored in IndexedDB via Dexie
-- **Player tagging** — assign players to positions; tags propagate to descendants (shown with `?`). Filter the move list to a single player's repertoire. "Played by: everybody" shown at root and after the first move (before any opponent response).
+- **Player tagging** — assign players to positions; shown as certain on the path to a tagged position, uncertain (with `?`) beyond tagged territory, and hidden if the player deviated at any of their moves along the path. Filter the move list to a single player's repertoire. "Played by: everybody" shown at root and after the first move (before any opponent response).
 
 ## Tech Stack
 
