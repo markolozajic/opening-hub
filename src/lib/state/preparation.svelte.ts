@@ -195,7 +195,7 @@ export function getPlayersAt(repertoire: Repertoire, fen: string): { name: strin
   const descendantSet = new Set(descendants);
 
   for (const rk of Object.keys(taggedFens)) {
-    if (!rk.startsWith(prefix)) continue;
+    if (!rk.startsWith(prefix)) continue;  // only look at current color repertoire
     const player = rk.split('|')[1];
     const tSet = taggedFens[rk];
     if (!tSet || tSet.size === 0) continue;
@@ -212,7 +212,7 @@ export function getPlayersAt(repertoire: Repertoire, fen: string): { name: strin
     //    reachable for them
     let deviated = false;
     for (let i = 0; i < path.length - 1; i++) {
-      const isPlayerTurn = (repertoire === 'white' && i % 2 === 1) || (repertoire === 'black' && i % 2 === 0);
+      const isPlayerTurn = (repertoire === 'white' && i % 2 === 0) || (repertoire === 'black' && i % 2 === 1);
       if (!isPlayerTurn) continue;
 
       const pos = getPosition(repertoire, path[i]);
