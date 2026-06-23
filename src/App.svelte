@@ -22,7 +22,7 @@
   import ExportPanel from './lib/components/ExportPanel.svelte';
   import CleanupPanel from './lib/components/CleanupPanel.svelte';
   import { pgnView, pgnCurrentFen, closePgnView } from './lib/state/pgnView.svelte';
-  import { loadFromDb, migrateOldPreparationData } from './lib/state/preparation.svelte';
+  import { loadFromDb } from './lib/state/preparation.svelte';
   import PreparationPanel from './lib/components/PreparationPanel.svelte';
   import SettingsPanel from './lib/components/SettingsPanel.svelte';
   import { initSync } from './lib/state/gistSync.svelte';
@@ -51,10 +51,6 @@
 
   onMount(async () => {
     await initPositionStore();
-    if (!localStorage.getItem('openinghub_opponent_migrated')) {
-      await migrateOldPreparationData();
-      localStorage.setItem('openinghub_opponent_migrated', '1');
-    }
     await loadFromDb('white');
     await initSync();
     initialized = true;

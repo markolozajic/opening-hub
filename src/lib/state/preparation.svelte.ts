@@ -99,7 +99,7 @@ export function addOpponent(repertoire: Repertoire, opponent: string): Promise<v
   if (taggedFens[rk]) return Promise.resolve();
   taggedFens[rk] = new Set();
   opponentDates[rk] = new Date().toISOString().slice(0, 10);
-  return db.preparation.put({ repertoire, opponent, taggedFens: [], updatedAt: opponentDates[rk] }).then(syncOpponentNames);
+  return db.preparation.put({ repertoire, player: opponent, taggedFens: [], updatedAt: opponentDates[rk] }).then(syncOpponentNames);
 }
 
 export async function loadFromDb(repertoire: Repertoire): Promise<void> {
@@ -113,9 +113,8 @@ export async function loadFromDb(repertoire: Repertoire): Promise<void> {
   }
   const today = new Date().toISOString().slice(0, 10);
   for (const rec of records) {
-    if (!rec.opponent) continue;
-    taggedFens[repKey(repertoire, rec.opponent)] = new Set(rec.taggedFens);
-    opponentDates[repKey(repertoire, rec.opponent)] = rec.updatedAt || today;
+    taggedFens[repKey(repertoire, rec.player)] = new Set(rec.taggedFens);
+    opponentDates[repKey(repertoire, rec.player)] = rec.updatedAt || today;
   }
   syncOpponentNames();
 }
@@ -139,7 +138,7 @@ export async function tagPosition(repertoire: Repertoire, fen: string, opponent:
     }
   }
 
-  await db.preparation.put({ repertoire, opponent, taggedFens: Array.from(taggedFens[rk]), updatedAt: opponentDates[rk] });
+  await db.preparation.put({ repertoire, player: opponent, taggedFens: Array.from(taggedFens[rk]), updatedAt: opponentDates[rk] });
   syncOpponentNames();
 }
 
@@ -156,7 +155,7 @@ export async function untagPosition(repertoire: Repertoire, fen: string, opponen
     delete opponentDates[rk];
     await db.preparation.delete([repertoire, opponent]);
   } else {
-    await db.preparation.put({ repertoire, opponent, taggedFens: Array.from(taggedFens[rk]), updatedAt: opponentDates[rk] });
+  await db.preparation.put({ repertoire, player: opponent, taggedFens: Array.from(taggedFens[rk]), updatedAt: opponentDates[rk] });
   }
   syncOpponentNames();
 }
@@ -311,7 +310,7 @@ export async function refreshOpponentDate(repertoire: Repertoire, opponent: stri
   const rk = repKey(repertoire, opponent);
   if (!taggedFens[rk]) return;
   opponentDates[rk] = new Date().toISOString().slice(0, 10);
-  await db.preparation.put({ repertoire, opponent, taggedFens: Array.from(taggedFens[rk]), updatedAt: opponentDates[rk] });
+  await db.preparation.put({ repertoire, player: opponent, taggedFens: Array.from(taggedFens[rk]), updatedAt: opponentDates[rk] });
 }
 
 export function selectOpponent(opponent: string | null): void {
@@ -322,31 +321,4 @@ export function formatOpponentName(name: string): string {
   const comma = name.indexOf(', ');
   if (comma === -1) return name;
   return name.slice(comma + 2) + ' ' + name.slice(0, comma);
-}
-
-// One-off migration: old data has `player` field instead of `opponent`.
-// Run once from browser console, then delete this function.
-export async function migrateOldPreparationData(): Promise<void> {
-  const records = await db.preparation.toArray();
-  const seen = new Set<string>();
-  const valid: PreparationRecord[] = [];
-  for (const rec of records) {
-    const name = rec.opponent || (rec as any).player;
-    if (!name) continue;
-    const key = `${rec.repertoire}|${name}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    valid.push({
-      repertoire: rec.repertoire,
-      opponent: name,
-      taggedFens: rec.taggedFens,
-      updatedAt: rec.updatedAt,
-    });
-  }
-  await db.transaction('rw', db.preparation, async () => {
-    await db.preparation.clear();
-    for (const v of valid) {
-      await db.preparation.put(v);
-    }
-  });
 }

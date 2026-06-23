@@ -185,16 +185,14 @@ async function mergeCloudIntoLocal(cloudJson: string): Promise<void> {
 
   const cloudPrepMap = new Map<string, PreparationRecord>();
   for (const pr of cloudPrep) {
-    const name = pr.opponent || (pr as any).player;
-    if (!name) continue;
-    cloudPrepMap.set(`${pr.repertoire}|${name}`, { ...pr, opponent: name });
+    if (!pr.player) continue;
+    cloudPrepMap.set(`${pr.repertoire}|${pr.player}`, pr);
   }
 
   const localPrepMap = new Map<string, PreparationRecord>();
   for (const pr of localPrep) {
-    const name = pr.opponent || (pr as any).player;
-    if (!name) continue;
-    localPrepMap.set(`${pr.repertoire}|${name}`, { ...pr, opponent: name });
+    if (!pr.player) continue;
+    localPrepMap.set(`${pr.repertoire}|${pr.player}`, pr);
   }
 
   const allPrepKeys = new Set([...cloudPrepMap.keys(), ...localPrepMap.keys()]);
@@ -216,7 +214,6 @@ async function mergeCloudIntoLocal(cloudJson: string): Promise<void> {
   await db.transaction('rw', db.preparation, async () => {
     await db.preparation.clear();
     for (const pr of mergedPrep) {
-      if (!pr.opponent) continue;
       await db.preparation.put(pr);
     }
   });
