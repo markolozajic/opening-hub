@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { syncState, getGistCredentials, setGistCredentials, clearGistCredentials, createGist, mergeAndSync } from '../state/gistSync.svelte';
-  import { RefreshCw, Link, Plus, Trash2, X, Check, AlertTriangle } from '@lucide/svelte';
+  import { syncState, getGistCredentials, setGistCredentials, clearGistCredentials, createGist, saveToGist } from '../state/gistSync.svelte';
+  import { Upload, Link, Plus, Trash2, X, Check, AlertTriangle } from '@lucide/svelte';
 
   let {
     onClose = undefined as (() => void) | undefined,
@@ -43,10 +43,10 @@
     status = '';
   }
 
-  async function handleSyncNow() {
-    status = 'syncing';
-    await mergeAndSync();
-    status = syncState.error ? 'error' : 'synced';
+  async function handleSaveToGist() {
+    status = 'saving';
+    await saveToGist();
+    status = syncState.error ? 'error' : 'saved';
   }
 </script>
 
@@ -98,16 +98,16 @@
         </div>
 
         <div class="sync-actions">
-          <button class="btn primary" onclick={handleSyncNow} disabled={syncState.syncing}>
-              <RefreshCw size={13} class={syncState.syncing ? 'spinning' : ''} /> {syncState.syncing ? 'Syncing…' : 'Sync Now'}
+          <button class="btn primary" onclick={handleSaveToGist} disabled={syncState.saving}>
+              <Upload size={13} /> {syncState.saving ? 'Saving…' : 'Save to Gist'}
           </button>
           <button class="btn danger" onclick={handleClear}>
             <Trash2 size={13} /> Clear Credentials
           </button>
         </div>
 
-        {#if syncState.lastSync}
-          <p class="sync-info">Last sync: {syncState.lastSync}</p>
+        {#if syncState.lastSave}
+          <p class="sync-info">Last saved: {syncState.lastSave}</p>
         {/if}
         {#if syncState.error}
           <div class="error-box">
@@ -119,10 +119,10 @@
 
     {#if status === 'creating'}
       <p class="status">Creating Gist…</p>
-    {:else if status === 'syncing'}
-      <p class="status">Syncing…</p>
-    {:else if status === 'synced'}
-      <p class="status success">Synced successfully.</p>
+    {:else if status === 'saving'}
+      <p class="status">Saving…</p>
+    {:else if status === 'saved'}
+      <p class="status success">Saved to Gist.</p>
     {:else if status === 'error'}
       <p class="status error">Sync failed. See error above.</p>
     {:else if status === 'created'}

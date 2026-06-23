@@ -11,8 +11,9 @@ export const syncState = $state({
   hasToken: false,
   hasGist: false,
   tokenPreview: '',
-  syncing: false,
-  lastSync: null as string | null,
+  saving: false,
+  loading: false,
+  lastSave: null as string | null,
   error: null as string | null,
 });
 
@@ -36,7 +37,7 @@ export function setGistCredentials(token: string, gistId: string): void {
   localStorage.setItem(GIST_ID_KEY, gistId);
   readCreds();
   if (gistId) {
-    mergeAndSync();
+    saveToGist();
   }
 }
 
@@ -215,11 +216,11 @@ async function mergeCloudIntoLocal(cloudJson: string): Promise<void> {
   });
 }
 
-export async function mergeAndSync(): Promise<void> {
+export async function loadFromGist(): Promise<void> {
   const creds = credentials();
   if (!creds) return;
 
-  syncState.syncing = true;
+  syncState.loading = true;
   syncState.error = null;
 
   try {
@@ -227,18 +228,33 @@ export async function mergeAndSync(): Promise<void> {
     if (cloudJson) {
       await mergeCloudIntoLocal(cloudJson);
     }
-    const localJson = await dumpLocalData();
-    await pushToGist(localJson);
-    syncState.lastSync = new Date().toLocaleString();
   } catch (e) {
-    syncState.error = e instanceof Error ? e.message : 'Sync failed';
+    syncState.error = e instanceof Error ? e.message : 'Load failed';
   } finally {
-    syncState.syncing = false;
+    syncState.loading = false;
+  }
+}
+
+export async function saveToGist(): Promise<void> {
+  const creds = credentials();
+  if (!creds) return;
+
+  syncState.saving = true;
+  syncState.error = null;
+
+  try {
+    const json = await dumpLocalData();
+    await pushToGist(json);
+    syncState.lastSave = new Date().toLocaleString();
+  } catch (e) {
+    syncState.error = e instanceof Error ? e.message : 'Save failed';
+  } finally {
+    syncState.saving = false;
   }
 }
 
 export function initSync(): void {
   readCreds();
   if (!syncState.hasGist) return;
-  mergeAndSync();
+  loadFromGist();
 }
