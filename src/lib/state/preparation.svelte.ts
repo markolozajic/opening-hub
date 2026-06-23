@@ -188,14 +188,24 @@ export function getPlayersAt(repertoire: Repertoire, fen: string): { name: strin
 
   if (fen === STARTING_FEN) return result;
 
-  const ancestors = getAncestors(repertoire, fen);
-  ancestors.reverse();
-  const path = [...ancestors, fen];
+  // Build path from nav.currentPath — the exact sequence the user navigated,
+  // avoiding transposition ambiguities from tree-based getAncestors
+  const path = [STARTING_FEN];
+  for (const step of nav.currentPath) {
+    path.push(step.toFen);
+  }
+  if (path[path.length - 1] !== fen) {
+    const ancestors = getAncestors(repertoire, fen);
+    ancestors.reverse();
+    path.length = 0;
+    path.push(...ancestors, fen);
+  }
+
   const descendants = getDescendants(repertoire, fen);
   const descendantSet = new Set(descendants);
 
   for (const rk of Object.keys(taggedFens)) {
-    if (!rk.startsWith(prefix)) continue;  // only look at current color repertoire
+    if (!rk.startsWith(prefix)) continue;
     const player = rk.split('|')[1];
     const tSet = taggedFens[rk];
     if (!tSet || tSet.size === 0) continue;
@@ -206,15 +216,13 @@ export function getPlayersAt(repertoire: Repertoire, fen: string): { name: strin
       continue;
     }
 
-    // 2. Deviation check: at each position on the path where it's the player's
-    //    turn, if they have any tagged child at that position but the actual
-    //    child isn't one of them, the player deviated — this position is not
-    //    reachable for them
-    let deviated = false;
+    // 2. Deviation check: walk every step of the path. When a position has any
+    //    child in the player's taggedFens but the actual child isn't one of them:
+    //    - player's turn → player deviated (uncertain, but still reachable)
+    //    - opponent's turn → opponent deviated (not reachable at all)
+    let playerDeviated = false;
+    let opponentDeviated = false;
     for (let i = 0; i < path.length - 1; i++) {
-      const isPlayerTurn = (repertoire === 'white' && i % 2 === 0) || (repertoire === 'black' && i % 2 === 1);
-      if (!isPlayerTurn) continue;
-
       const pos = getPosition(repertoire, path[i]);
       if (!pos) continue;
 
@@ -222,16 +230,19 @@ export function getPlayersAt(repertoire: Repertoire, fen: string): { name: strin
       if (!hasTaggedChild) continue;
 
       if (!tSet.has(path[i + 1])) {
-        deviated = true;
-        break;
+        const isPlayerTurn = (repertoire === 'white' && i % 2 === 0) || (repertoire === 'black' && i % 2 === 1);
+        if (isPlayerTurn) {
+          playerDeviated = true;
+        } else {
+          opponentDeviated = true;
+          break;
+        }
       }
     }
-    if (deviated) result.push({ name: player, certain: false });
+    if (opponentDeviated) continue;
 
-    // 3. Reachable and on the path to a tagged position (fen is ancestor of a taggedFen)
-    if (Array.from(tSet).some(t => descendantSet.has(t))) {
-      result.push({ name: player, certain: true });
-    }
+    const certain = !playerDeviated && Array.from(tSet).some(t => descendantSet.has(t));
+    result.push({ name: player, certain });
   }
 
   return result.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
