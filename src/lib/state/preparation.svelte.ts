@@ -328,17 +328,25 @@ export function formatOpponentName(name: string): string {
 // Run once from browser console, then delete this function.
 export async function migrateOldPreparationData(): Promise<void> {
   const records = await db.preparation.toArray();
+  const seen = new Set<string>();
+  const valid: PreparationRecord[] = [];
   for (const rec of records) {
-    if (!rec.opponent) {
-      const oldPlayer = (rec as any).player;
-      if (oldPlayer) {
-        await db.preparation.put({
-          repertoire: rec.repertoire,
-          opponent: oldPlayer,
-          taggedFens: rec.taggedFens,
-          updatedAt: rec.updatedAt,
-        });
-      }
-    }
+    const name = rec.opponent || (rec as any).player;
+    if (!name) continue;
+    const key = `${rec.repertoire}|${name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    valid.push({
+      repertoire: rec.repertoire,
+      opponent: name,
+      taggedFens: rec.taggedFens,
+      updatedAt: rec.updatedAt,
+    });
   }
+  await db.transaction('rw', db.preparation, async () => {
+    await db.preparation.clear();
+    for (const v of valid) {
+      await db.preparation.put(v);
+    }
+  });
 }
