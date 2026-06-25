@@ -76,9 +76,7 @@ export function recomputeLabels(repertoire: Repertoire): void {
       let effectiveLabel: MoveLabel;
 
       if (isOurTurn) {
-        effectiveLabel = (edge.label === 'alternative' || edge.label === 'avoid')
-          ? edge.label
-          : (currentPositionLabel ?? 'main');
+        effectiveLabel = edge.label ?? (currentPositionLabel ?? 'main');
       } else {
         effectiveLabel = currentPositionLabel ?? 'main';
       }

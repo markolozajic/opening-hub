@@ -1,6 +1,6 @@
 <script lang="ts">
   import { nav } from '../state/navigation.svelte';
-  import { labelData } from '../state/labels.svelte';
+  import { labelData, recomputeLabels } from '../state/labels.svelte';
   import { getPosition, setMoveMarker, setMoveLabel, setComfortLevel, setForcedDraw, setPracticalDraw, setMoveOrder } from '../db/positionStore.svelte';
   import { findMoveNumber, findAllTranspositionPaths } from '../utils/positionQueries';
   import type { MovePathStep, MoveMarker, ComfortLevel, MoveLabel } from '../types';
@@ -221,6 +221,7 @@
       invalidateDrawCounts(rep);
     }
 
+    recomputeLabels(rep);
     closeMetaDialog();
   }
 
