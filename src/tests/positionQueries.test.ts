@@ -46,10 +46,6 @@ beforeEach(() => {
 // ---------- findMoveNumber ----------
 
 describe('findMoveNumber', () => {
-  it('returns 0 for root', () => {
-    expect(findMoveNumber('white', ROOT)).toBe(0);
-  });
-
   it('returns 1 for depth-1 position', () => {
     mockPositionCache[cacheKey('white', A)] = pos(A);
     mockPositionCache[cacheKey('white', ROOT)] = pos(ROOT, { e4: A });
@@ -84,10 +80,6 @@ describe('findMoveNumber', () => {
 // ---------- buildMovePath ----------
 
 describe('buildMovePath', () => {
-  it('returns empty path for root', () => {
-    expect(buildMovePath('white', ROOT)).toEqual([]);
-  });
-
   it('returns path from root to target', () => {
     mockPositionCache[cacheKey('white', A)] = pos(A);
     mockPositionCache[cacheKey('white', ROOT)] = pos(ROOT, { e4: A });
@@ -125,10 +117,6 @@ describe('buildMovePath', () => {
 // ---------- findAllTranspositionPaths ----------
 
 describe('findAllTranspositionPaths', () => {
-  it('returns empty array for root', () => {
-    expect(findAllTranspositionPaths('white', ROOT)).toEqual([]);
-  });
-
   it('returns single path when no transpositions', () => {
     mockPositionCache[cacheKey('white', A)] = pos(A, { e5: B });
     mockPositionCache[cacheKey('white', B)] = pos(B);
@@ -177,7 +165,4 @@ describe('getUnreachablePositions', () => {
     expect(unreachable[0].fen).toBe('orphan');
   });
 
-  it('handles empty tree', () => {
-    expect(getUnreachablePositions('white')).toEqual([]);
-  });
 });

@@ -318,6 +318,7 @@
         onAdd={handleAddLink}
         onRemove={handleRemoveLink}
         onEdit={handleEditLink}
+        onAddPgn={({ pgn, url, label }) => handleAddPgn({ id: crypto.randomUUID(), pgn, label, url })}
       />
     </div>
 

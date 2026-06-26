@@ -1,7 +1,9 @@
 <script lang="ts">
   import type { Link } from '../types';
-  import { Film, Globe, Trash2, Plus, Pencil } from '@lucide/svelte';
+  import { Chess } from 'chess.js';
+  import { Film, Globe, Sword, Trash2, Plus, Pencil } from '@lucide/svelte';
   import { parseYouTubeUrl } from '../utils/youtube';
+  import { parseLichessUrl, fetchLichessPgn } from '../utils/lichess';
 
   let {
     links = [] as Link[],
@@ -9,18 +11,20 @@
     onAdd = (_link: Link) => {},
     onRemove = (_id: string) => {},
     onEdit = (_id: string, _updates: Partial<Link>) => {},
+    onAddPgn = (_data: { pgn: string; url: string; label: string }) => {},
   } = $props();
 
   let showForm = $state(false);
   let url = $state('');
   let label = $state('');
-  let type = $state<'youtube' | 'other'>('other');
+  let type = $state<'youtube' | 'other' | 'lichess'>('other');
   let fetchingTitle = $state(false);
+  let fetchedPgn = $state<string | null>(null);
 
   let editingId = $state<string | null>(null);
   let editUrl = $state('');
   let editLabel = $state('');
-  let editType = $state<'youtube' | 'other'>('other');
+  let editType = $state<'youtube' | 'other' | 'lichess'>('other');
   let editFetchingTitle = $state(false);
 
   const YOUTUBE_RE = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
@@ -36,6 +40,27 @@
     }
   }
 
+  function extractPgnLabel(pgn: string): string {
+    try {
+      const chess = new Chess();
+      chess.loadPgn(pgn);
+      const h = chess.getHeaders();
+      const ok = (v: string) => v && v !== '?' && v !== '*' && v !== '????.??.??' && v !== '-';
+      const parts: string[] = [];
+      if (ok(h['White']) && ok(h['Black'])) {
+        let p = `${h['White']} vs ${h['Black']}`;
+        if (ok(h['Result'])) p += `, ${h['Result']}`;
+        parts.push(p);
+      }
+      const year = h['Event']?.match(/(\d{4})/)?.[1] || (ok(h['Date']) ? h['Date'].substring(0, 4) : '');
+      const cleanEvent = h['Event']?.replace(/\s*\d{4}\s*$/, '').trim() || '';
+      if (cleanEvent || year) parts.push([cleanEvent, year].filter(Boolean).join(', '));
+      return parts.length > 0 ? parts.join(' · ') : 'Lichess Game';
+    } catch {
+      return 'Lichess Game';
+    }
+  }
+
   async function handleTypeChange(newType: string, currentUrl: string, currentLabel: string, setIsFetching: (v: boolean) => void, setLabel: (v: string) => void) {
     if (newType === 'youtube' && YOUTUBE_RE.test(currentUrl) && !currentLabel.trim()) {
       setIsFetching(true);
@@ -43,14 +68,33 @@
       if (title) setLabel(title);
       setIsFetching(false);
     }
+    if (newType === 'lichess') {
+      const gameId = parseLichessUrl(currentUrl);
+      if (gameId && !currentLabel.trim()) {
+        setIsFetching(true);
+        try {
+          const pgn = await fetchLichessPgn(gameId);
+          fetchedPgn = pgn;
+          setLabel(extractPgnLabel(pgn));
+        } catch {
+          fetchedPgn = null;
+        }
+        setIsFetching(false);
+      }
+    }
   }
 
   function handleAdd() {
     if (!url.trim()) return;
-    onAdd({ id: crypto.randomUUID(), url: url.trim(), label: label.trim() || url.trim(), type });
+    const link: Link = { id: crypto.randomUUID(), url: url.trim(), label: label.trim() || url.trim(), type };
+    onAdd(link);
+    if (type === 'lichess' && fetchedPgn) {
+      onAddPgn({ pgn: fetchedPgn, url: url.trim(), label: label.trim() || url.trim() });
+    }
     url = '';
     label = '';
     type = 'other';
+    fetchedPgn = null;
     showForm = false;
   }
 
@@ -85,6 +129,7 @@
             <input bind:value={editLabel} placeholder="Label (optional)" class="input" />
             <select bind:value={editType} class="input" onchange={() => handleTypeChange(editType, editUrl, editLabel, v => editFetchingTitle = v, v => editLabel = v)}>
               <option value="youtube">YouTube</option>
+              <option value="lichess">Lichess</option>
               <option value="other">Other</option>
             </select>
             {#if editFetchingTitle}
@@ -100,6 +145,8 @@
             <div class="link-item">
               {#if link.type === 'youtube'}
                 <Film size={14} class="link-icon" />
+              {:else if link.type === 'lichess'}
+                <Sword size={14} class="link-icon" />
               {:else}
                 <Globe size={14} class="link-icon" />
               {/if}
@@ -144,10 +191,11 @@
         <input bind:value={label} placeholder="Label (optional)" class="input" />
         <select bind:value={type} class="input" onchange={() => handleTypeChange(type, url, label, v => fetchingTitle = v, v => label = v)}>
           <option value="youtube">YouTube</option>
+          <option value="lichess">Lichess</option>
           <option value="other">Other</option>
         </select>
         {#if fetchingTitle}
-          <span class="fetching">Fetching title…</span>
+          <span class="fetching">{type === 'lichess' ? 'Fetching game…' : 'Fetching title…'}</span>
         {/if}
         <div class="form-actions">
           <button class="btn primary" onclick={handleAdd}>Add</button>

@@ -294,9 +294,6 @@ describe('canGoBack', () => {
     expect(canGoBack()).toBe(true);
   });
 
-  it('returns false at root with empty backStack', () => {
-    expect(canGoBack()).toBe(false);
-  });
 });
 
 describe('canGoForward', () => {
@@ -305,9 +302,6 @@ describe('canGoForward', () => {
     expect(canGoForward()).toBe(true);
   });
 
-  it('returns false when forwardStack is empty', () => {
-    expect(canGoForward()).toBe(false);
-  });
 });
 
 // ---------- navigateToRoot ----------

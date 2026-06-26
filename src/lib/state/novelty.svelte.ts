@@ -18,7 +18,7 @@ function computeNoveltyFor(repertoire: Repertoire, fen: string): boolean {
     const pos = getPosition(repertoire, f);
     if (!pos) continue;
     for (const edge of Object.values(pos.moves)) {
-      if (edge.marker !== 'N' && !familiar.has(edge.toFen)) {
+      if (!edge.isNovelty && !familiar.has(edge.toFen)) {
         familiar.add(edge.toFen);
         queueFamiliar.push(edge.toFen);
       }
@@ -78,7 +78,7 @@ function computeOnlineNoveltyFor(repertoire: Repertoire, fen: string): boolean {
     const pos = getPosition(repertoire, f);
     if (!pos) continue;
     for (const edge of Object.values(pos.moves)) {
-      if (edge.marker !== 'ON' && !familiar.has(edge.toFen)) {
+      if (!edge.isOnlineNovelty && !familiar.has(edge.toFen)) {
         familiar.add(edge.toFen);
         queueFamiliar.push(edge.toFen);
       }

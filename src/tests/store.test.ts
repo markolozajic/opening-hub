@@ -5,11 +5,12 @@ import { normalizeFen } from '../lib/utils/fen';
 import { STARTING_FEN } from '../lib/constants';
 import type { Repertoire } from '../lib/types';
 import { db } from '../lib/db/schema';
+import type { NoveltyMarker } from '../lib/types';
 import {
   initPositionStore, positionCache,
   addMove, getPosition, getOrCreatePosition,
   setComfortLevel, setPositionName, setPositionComment,
-  setMoveLabel, setMoveMarker, setMoveOrder, setMoveComment,
+  setMoveLabel, setMoveMarker, setMoveNovelty, setMoveOrder, setMoveComment,
   confirmMove, dismissMove, deletePosition,
 } from '../lib/db/positionStore.svelte';
 
@@ -167,6 +168,52 @@ describe('setMoveMarker', () => {
     await setMoveMarker(rep, ROOT, 'e4', '!');
     await setMoveMarker(rep, ROOT, 'e4', undefined);
     expect(getPosition(rep, ROOT)?.moves['e4'].marker).toBeUndefined();
+  });
+});
+
+describe('setMoveNovelty', () => {
+  it('sets isNovelty on a move edge', async () => {
+    await addMove(rep, ROOT, 'e4', A);
+    await setMoveNovelty(rep, ROOT, 'e4', 'N', true);
+    expect(getPosition(rep, ROOT)?.moves['e4'].isNovelty).toBe(true);
+  });
+
+  it('removes isNovelty when set to false', async () => {
+    await addMove(rep, ROOT, 'e4', A);
+    await setMoveNovelty(rep, ROOT, 'e4', 'N', true);
+    await setMoveNovelty(rep, ROOT, 'e4', 'N', false);
+    expect(getPosition(rep, ROOT)?.moves['e4'].isNovelty).toBeUndefined();
+  });
+
+  it('sets isOnlineNovelty on a move edge', async () => {
+    await addMove(rep, ROOT, 'e4', A);
+    await setMoveNovelty(rep, ROOT, 'e4', 'ON', true);
+    expect(getPosition(rep, ROOT)?.moves['e4'].isOnlineNovelty).toBe(true);
+  });
+
+  it('removes isOnlineNovelty when set to false', async () => {
+    await addMove(rep, ROOT, 'e4', A);
+    await setMoveNovelty(rep, ROOT, 'e4', 'ON', true);
+    await setMoveNovelty(rep, ROOT, 'e4', 'ON', false);
+    expect(getPosition(rep, ROOT)?.moves['e4'].isOnlineNovelty).toBeUndefined();
+  });
+
+  it('allows marker and isNovelty to coexist', async () => {
+    await addMove(rep, ROOT, 'e4', A);
+    await setMoveMarker(rep, ROOT, 'e4', '!');
+    await setMoveNovelty(rep, ROOT, 'e4', 'N', true);
+    const edge = getPosition(rep, ROOT)?.moves['e4'];
+    expect(edge?.marker).toBe('!');
+    expect(edge?.isNovelty).toBe(true);
+  });
+
+  it('allows isNovelty and isOnlineNovelty to coexist', async () => {
+    await addMove(rep, ROOT, 'e4', A);
+    await setMoveNovelty(rep, ROOT, 'e4', 'N', true);
+    await setMoveNovelty(rep, ROOT, 'e4', 'ON', true);
+    const edge = getPosition(rep, ROOT)?.moves['e4'];
+    expect(edge?.isNovelty).toBe(true);
+    expect(edge?.isOnlineNovelty).toBe(true);
   });
 });
 

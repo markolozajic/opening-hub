@@ -2,7 +2,7 @@
   import type { PgnAttachment } from '../types';
   import { Chess } from 'chess.js';
   import { openPgnView } from '../state/pgnView.svelte';
-  import { FileText, Trash2, Plus, ChevronDown, ChevronUp, Eye } from '@lucide/svelte';
+  import { FileText, ExternalLink, Trash2, Plus, ChevronDown, ChevronUp, Eye } from '@lucide/svelte';
 
   let {
     attachments = [] as PgnAttachment[],
@@ -99,6 +99,11 @@
             </button>
             <FileText size={14} class="att-icon" />
             <span class="att-label">{att.label}</span>
+            {#if att.url}
+              <a href={att.url} target="_blank" rel="noopener noreferrer" class="btn-icon link-btn" title="Open on Lichess">
+                <ExternalLink size={12} />
+              </a>
+            {/if}
             {#if !readonly}
               <button class="btn-icon" onclick={() => onRemove(att.id)} title="Remove">
                 <Trash2 size={12} />
@@ -165,6 +170,8 @@
     color: var(--muted); border-radius: 3px; flex-shrink: 0;
   }
   .btn-icon:hover { color: var(--danger); background: var(--surface2); }
+  .link-btn { display: inline-flex; align-items: center; padding: 2px; }
+  .link-btn:hover { color: var(--accent); background: var(--surface2); }
   .add-form { display: flex; flex-direction: column; gap: 0.375rem; margin-top: 0.5rem; }
   .form-actions { display: flex; gap: 0.375rem; }
   .add-btn { margin-top: 0.375rem; }

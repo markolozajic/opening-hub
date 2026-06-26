@@ -1,7 +1,8 @@
 export type Repertoire = 'white' | 'black';
 
 export type ComfortLevel = 'easy' | 'comfortable' | 'moderate' | 'uncomfortable' | 'struggling';
-export type MoveMarker = '?' | '!' | '!?' | '?!' | '??' | '!!' | 'N' | 'ON';
+export type MoveMarker = '?' | '!' | '!?' | '?!' | '??' | '!!';
+export type NoveltyMarker = 'N' | 'ON';
 export type MoveLabel = 'main' | 'alternative' | 'avoid';
 export type SortMode = 'comfort' | 'manual';
 
@@ -11,19 +12,22 @@ export interface MoveEdge {
   autoDetected?: boolean;
   label?: MoveLabel;
   marker?: MoveMarker;
+  isNovelty?: boolean;
+  isOnlineNovelty?: boolean;
 }
 
 export interface Link {
   id: string;
   url: string;
   label: string;
-  type: 'youtube' | 'other';
+  type: 'youtube' | 'other' | 'lichess';
 }
 
 export interface PgnAttachment {
   id: string;
   pgn: string;
   label: string;
+  url?: string;
 }
 
 export interface Position {

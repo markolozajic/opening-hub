@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { db } from './schema';
-import type { Position, Repertoire, ComfortLevel, Link, PgnAttachment, MoveLabel, MoveMarker, PreparationRecord } from '../types';
+import type { Position, Repertoire, ComfortLevel, Link, PgnAttachment, MoveLabel, MoveMarker, NoveltyMarker, PreparationRecord } from '../types';
 import { cacheKey, toChessJsFen, getTurn, normalizeFen } from '../utils/fen';
 import { invalidateNoveltyCache, invalidateOnlineNoveltyCache } from '../state/novelty.svelte';
 import { STARTING_FEN, STARTING_POSITION_COMMENT } from '../constants';
@@ -49,10 +49,30 @@ async function ensureRoot(repertoire: Repertoire): Promise<void> {
   await db.positions.put(toPlain(root));
 }
 
+function migrateLegacyMarkers(p: Position): boolean {
+  let changed = false;
+  for (const edge of Object.values(p.moves)) {
+    if (edge.marker === 'N') {
+      edge.isNovelty = true;
+      delete edge.marker;
+      changed = true;
+    } else if (edge.marker === 'ON') {
+      edge.isOnlineNovelty = true;
+      delete edge.marker;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 export async function initPositionStore(): Promise<void> {
   const all = await db.positions.toArray();
   for (const p of all) {
     positionCache[cacheKey(p.repertoire, p.fen)] = p;
+    if (migrateLegacyMarkers(p)) {
+      p.updatedAt = Date.now();
+      await db.positions.put(toPlain(p));
+    }
   }
   ensureRoot('white');
   ensureRoot('black');
@@ -238,7 +258,22 @@ export async function setMoveMarker(repertoire: Repertoire, fen: string, san: st
   pos.updatedAt = Date.now();
   await db.positions.put(toPlain(pos));
   invalidateNoveltyCache(repertoire);
-  invalidateOnlineNoveltyCache(repertoire);
+}
+
+export async function setMoveNovelty(repertoire: Repertoire, fen: string, san: string, type: NoveltyMarker, value: boolean): Promise<void> {
+  const pos = getPosition(repertoire, fen);
+  if (!pos || !pos.moves[san]) return;
+  if (type === 'N') {
+    pos.moves[san].isNovelty = value || undefined;
+    pos.updatedAt = Date.now();
+    await db.positions.put(toPlain(pos));
+    invalidateNoveltyCache(repertoire);
+  } else {
+    pos.moves[san].isOnlineNovelty = value || undefined;
+    pos.updatedAt = Date.now();
+    await db.positions.put(toPlain(pos));
+    invalidateOnlineNoveltyCache(repertoire);
+  }
 }
 
 export async function addLink(repertoire: Repertoire, fen: string, link: Link): Promise<void> {

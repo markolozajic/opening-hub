@@ -1,9 +1,9 @@
 <script lang="ts">
   import { nav } from '../state/navigation.svelte';
   import { labelData, recomputeLabels } from '../state/labels.svelte';
-  import { getPosition, setMoveMarker, setMoveLabel, setComfortLevel, setForcedDraw, setPracticalDraw, setMoveOrder } from '../db/positionStore.svelte';
+  import { getPosition, setMoveMarker, setMoveNovelty, setMoveLabel, setComfortLevel, setForcedDraw, setPracticalDraw, setMoveOrder } from '../db/positionStore.svelte';
   import { findMoveNumber, findAllTranspositionPaths } from '../utils/positionQueries';
-  import type { MovePathStep, MoveMarker, ComfortLevel, MoveLabel } from '../types';
+  import type { MovePathStep, MoveMarker, NoveltyMarker, ComfortLevel, MoveLabel } from '../types';
   import { COMFORT_COLORS, COMFORT_LABELS, MOVE_LABELS } from '../constants';
   import { getComfort, invalidateComfortCache } from '../state/comfort.svelte';
   import { getDrawCounts, invalidateDrawCounts } from '../state/drawCounts.svelte';
@@ -48,6 +48,8 @@
               autoDetected: edge.autoDetected,
               label: labelData.moveLabels[nav.currentFen]?.[san],
               marker: edge.marker,
+              isNovelty: edge.isNovelty ?? false,
+              isOnlineNovelty: edge.isOnlineNovelty ?? false,
               childPos: getPosition(nav.activeRepertoire, edge.toFen),
               comfort: getComfort(nav.activeRepertoire, edge.toFen),
               forcedDraws: dc.forced,
@@ -154,6 +156,8 @@
 
   let editMoveSan = $state<string | null>(null);
   let editCurrentMarker = $state<MoveMarker | undefined>(undefined);
+  let editCurrentIsNovelty = $state(false);
+  let editCurrentIsOnlineNovelty = $state(false);
   let editCurrentLabel = $state<MoveLabel | undefined>(undefined);
   let editCurrentComfort = $state<ComfortLevel | undefined>(undefined);
   let editCurrentForcedDraw = $state(false);
@@ -191,6 +195,8 @@
     const edge = position?.moves[san];
     if (!edge) return;
     editCurrentMarker = edge.marker;
+    editCurrentIsNovelty = edge.isNovelty ?? false;
+    editCurrentIsOnlineNovelty = edge.isOnlineNovelty ?? false;
     editCurrentLabel = edge.label;
     editMoveSan = san;
     editToFen = edge.toFen;
@@ -209,6 +215,8 @@
     const san = editMoveSan;
 
     await setMoveMarker(rep, fen, san, editCurrentMarker);
+    await setMoveNovelty(rep, fen, san, 'N', editCurrentIsNovelty);
+    await setMoveNovelty(rep, fen, san, 'ON', editCurrentIsOnlineNovelty);
 
     if (editShowLabel) {
       await setMoveLabel(rep, fen, san, editCurrentLabel);
@@ -229,6 +237,8 @@
   function closeMetaDialog() {
     editMoveSan = null;
     editCurrentMarker = undefined;
+    editCurrentIsNovelty = false;
+    editCurrentIsOnlineNovelty = false;
     editCurrentLabel = undefined;
     editCurrentComfort = undefined;
     editCurrentForcedDraw = false;
@@ -306,15 +316,9 @@
               </div>
               <div class="move-info">
                 <span class="move-san">{move.displaySan}</span>
-                {#if move.marker}
-                  <span
-                    class="move-marker"
-                    class:move-marker-novelty={move.marker === 'N'}
-                    class:move-marker-online={move.marker === 'ON'}
-                  >
-                    {move.marker === 'ON' ? 'ON' : move.marker}
-                  </span>
-                {/if}
+                {#if move.marker}<span class="move-marker">{move.marker}</span>{/if}
+                {#if move.isNovelty}<span class="move-marker move-marker-novelty">N</span>{/if}
+                {#if move.isOnlineNovelty}<span class="move-marker move-marker-online">ON</span>{/if}
                 <ComfortBadge level={move.comfort} size={8} />
               </div>
             </div>
@@ -461,7 +465,7 @@
       {/if}
 
       <div class="dialog-section">
-        <span class="dialog-section-title">Marker</span>
+        <span class="dialog-section-title">Quality Marker</span>
         <div class="marker-options">
           {#each ['!!', '!', '!?', '?!', '?', '??'] as marker}
             {@const isSelected = editCurrentMarker === marker}
@@ -473,21 +477,27 @@
               {marker}
             </button>
           {/each}
+        </div>
+      </div>
+
+      <div class="dialog-section">
+        <span class="dialog-section-title">Novelty</span>
+        <div class="marker-options">
           <button
             class="meta-btn novelty-btn"
-            class:selected={editCurrentMarker === 'N'}
+            class:selected={editCurrentIsNovelty}
             class:disabled-novelty={isCurrentPositionNovel}
             disabled={isCurrentPositionNovel}
-            onclick={() => editCurrentMarker = editCurrentMarker === 'N' ? undefined : 'N' as MoveMarker}
+            onclick={() => editCurrentIsNovelty = !editCurrentIsNovelty}
           >
             N
           </button>
           <button
             class="meta-btn online-btn"
-            class:selected={editCurrentMarker === 'ON'}
+            class:selected={editCurrentIsOnlineNovelty}
             class:disabled-online={isCurrentPositionOnlineNovel}
             disabled={isCurrentPositionOnlineNovel}
-            onclick={() => editCurrentMarker = editCurrentMarker === 'ON' ? undefined : 'ON' as MoveMarker}
+            onclick={() => editCurrentIsOnlineNovelty = !editCurrentIsOnlineNovelty}
           >
             ON
           </button>
