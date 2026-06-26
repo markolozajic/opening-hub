@@ -45,7 +45,6 @@ export function recomputeLabels(repertoire: Repertoire): void {
   const rootFen = STARTING_FEN;
   const newPositionLabels: Record<string, MoveLabel | null> = {};
   const newMoveLabels: Record<string, Record<string, MoveLabel>> = {};
-  const processed = new Set<string>();
   const queue: Array<[string, MoveLabel | null]> = [[rootFen, null]];
 
   while (queue.length > 0) {
@@ -65,9 +64,6 @@ export function recomputeLabels(repertoire: Repertoire): void {
         newPositionLabels[fen] = 'alternative';
       }
     }
-
-    if (processed.has(fen)) continue;
-    processed.add(fen);
 
     const currentPositionLabel = newPositionLabels[fen];
 
