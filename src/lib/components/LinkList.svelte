@@ -100,10 +100,10 @@
 
   function handleAdd() {
     if (!url.trim()) return;
-    const link: Link = { id: crypto.randomUUID(), url: url.trim(), label: label.trim() || url.trim(), type };
-    onAdd(link);
     if (type === 'lichess' && fetchedPgn) {
       onAddPgn({ pgn: fetchedPgn, url: url.trim(), label: label.trim() || url.trim() });
+    } else {
+      onAdd({ id: crypto.randomUUID(), url: url.trim(), label: label.trim() || url.trim(), type });
     }
     url = '';
     label = '';
