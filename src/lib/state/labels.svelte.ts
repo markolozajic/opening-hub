@@ -45,6 +45,7 @@ export function recomputeLabels(repertoire: Repertoire): void {
   const rootFen = STARTING_FEN;
   const newPositionLabels: Record<string, MoveLabel | null> = {};
   const newMoveLabels: Record<string, Record<string, MoveLabel>> = {};
+  const processed = new Set<string>();
   const queue: Array<[string, MoveLabel | null]> = [[rootFen, null]];
 
   while (queue.length > 0) {
@@ -53,9 +54,13 @@ export function recomputeLabels(repertoire: Repertoire): void {
     if (!pos) continue;
 
     const existing = newPositionLabels[fen];
+    let labelChanged = false;
+
     if (existing === undefined) {
       newPositionLabels[fen] = pathLabel;
+      labelChanged = true;
     } else if (pathLabel !== null) {
+      const before = existing;
       if (pathLabel === 'avoid' || existing === 'avoid') {
         newPositionLabels[fen] = 'avoid';
       } else if (pathLabel === 'main' || existing === 'main') {
@@ -63,7 +68,15 @@ export function recomputeLabels(repertoire: Repertoire): void {
       } else if (pathLabel === 'alternative' && existing === null) {
         newPositionLabels[fen] = 'alternative';
       }
+      if (newPositionLabels[fen] !== before) labelChanged = true;
     }
+
+    // Re-process whenever the label is upgraded (e.g. alternative→main via
+    // transposition) so children inherit the corrected label. Skip repeat
+    // visits that don't upgrade the label — prevents infinite loops from
+    // threefold-repetition cycles.
+    if (processed.has(fen) && !labelChanged) continue;
+    processed.add(fen);
 
     const currentPositionLabel = newPositionLabels[fen];
 

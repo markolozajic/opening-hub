@@ -2,7 +2,7 @@
   import type { Position } from '../types';
   import { nav } from '../state/navigation.svelte';
   import { getComfort } from '../state/comfort.svelte';
-  import { getNovelty } from '../state/novelty.svelte';
+  import { getNovelty, getOnlineNovelty } from '../state/novelty.svelte';
   import { getOpponentsAt, prepState } from '../state/preparation.svelte';
   import { pgnView } from '../state/pgnView.svelte';
   import { getDrawCounts } from '../state/drawCounts.svelte';
@@ -22,6 +22,7 @@
   let comfort = $derived(fen ? getComfort(nav.activeRepertoire, fen) : null);
   let turn = $derived(position ? (position.fen.split(' ')[1] === 'w' ? 'White to move' : 'Black to move') : '');
   let isNovel = $derived(fen ? getNovelty(nav.activeRepertoire, fen) : false);
+  let isOnlineNovel = $derived(fen ? getOnlineNovelty(nav.activeRepertoire, fen) : false);
   let drawCounts = $derived(fen ? getDrawCounts(nav.activeRepertoire, fen) : { forced: 0, practical: 0 });
   let displayOpponents = $derived<{ name: string; certain: boolean }[]>(fen ? getOpponentsAt(nav.activeRepertoire, fen) : []);
   let isEverybody = $derived(
@@ -48,6 +49,9 @@
         <span class="comfort-label">{comfort ?? 'Unrated'}</span>
         {#if isNovel}
           <span class="novelty-badge">N</span>
+        {/if}
+        {#if isOnlineNovel}
+          <span class="online-novelty-badge">ON</span>
         {/if}
         <span class="sep">·</span>
         <span class="turn">{turn}</span>
@@ -118,6 +122,12 @@
     display: inline-flex; align-items: center; justify-content: center;
     font-size: 0.625rem; font-weight: 700; line-height: 1;
     color: #14b8a6; border: 1px solid #14b8a6; border-radius: 3px;
+    padding: 1px 4px; letter-spacing: 0.02em;
+  }
+  .online-novelty-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.625rem; font-weight: 700; line-height: 1;
+    color: #2563eb; border: 1px solid #2563eb; border-radius: 3px;
     padding: 1px 4px; letter-spacing: 0.02em;
   }
   .section { display: flex; flex-direction: column; gap: 0.375rem; }

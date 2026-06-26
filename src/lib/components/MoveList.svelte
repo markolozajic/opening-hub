@@ -7,7 +7,7 @@
   import { COMFORT_COLORS, COMFORT_LABELS, MOVE_LABELS } from '../constants';
   import { getComfort, invalidateComfortCache } from '../state/comfort.svelte';
   import { getDrawCounts, invalidateDrawCounts } from '../state/drawCounts.svelte';
-  import { getNovelty } from '../state/novelty.svelte';
+  import { getNovelty, getOnlineNovelty } from '../state/novelty.svelte';
   import { getTurn } from '../utils/fen';
   import { sortMoves, formatNumberedSan } from '../utils/positionUtils';
   import MiniBoard from './MiniBoard.svelte';
@@ -179,6 +179,7 @@
   let ourTurn = $derived(getTurn(nav.currentFen) === (nav.activeRepertoire === 'white' ? 'w' : 'b'));
   let moveCount = $derived(position ? Object.keys(position.moves).length : 0);
   let isCurrentPositionNovel = $derived(getNovelty(nav.activeRepertoire, nav.currentFen));
+  let isCurrentPositionOnlineNovel = $derived(getOnlineNovelty(nav.activeRepertoire, nav.currentFen));
 
   $effect(() => {
     if (metaDialogRef && editMoveSan !== null) {
@@ -305,7 +306,15 @@
               </div>
               <div class="move-info">
                 <span class="move-san">{move.displaySan}</span>
-                {#if move.marker}<span class="move-marker" class:move-marker-novelty={move.marker === 'N'}>{move.marker}</span>{/if}
+                {#if move.marker}
+                  <span
+                    class="move-marker"
+                    class:move-marker-novelty={move.marker === 'N'}
+                    class:move-marker-online={move.marker === 'ON'}
+                  >
+                    {move.marker === 'ON' ? 'ON' : move.marker}
+                  </span>
+                {/if}
                 <ComfortBadge level={move.comfort} size={8} />
               </div>
             </div>
@@ -472,6 +481,15 @@
             onclick={() => editCurrentMarker = editCurrentMarker === 'N' ? undefined : 'N' as MoveMarker}
           >
             N
+          </button>
+          <button
+            class="meta-btn online-btn"
+            class:selected={editCurrentMarker === 'ON'}
+            class:disabled-online={isCurrentPositionOnlineNovel}
+            disabled={isCurrentPositionOnlineNovel}
+            onclick={() => editCurrentMarker = editCurrentMarker === 'ON' ? undefined : 'ON' as MoveMarker}
+          >
+            ON
           </button>
         </div>
       </div>
@@ -662,6 +680,7 @@
   .move-san { font-weight: 600; font-size: 0.9375rem; color: var(--text-h); }
   .move-marker { font-weight: 600; font-size: 0.9375rem; color: var(--accent); }
   .move-marker-novelty { color: #14b8a6; }
+  .move-marker-online { color: #2563eb; }
   .move-comment { font-size: 0.6875rem; color: var(--text); line-height: 1.3; }
   .child-name { font-size: 0.6875rem; color: var(--accent); font-style: italic; }
 
@@ -753,6 +772,10 @@
   .novelty-btn.selected { border-color: #14b8a6; background: color-mix(in srgb, #14b8a6 15%, transparent); color: #14b8a6; }
   .novelty-btn.disabled-novelty { opacity: 0.35; cursor: not-allowed; }
   .novelty-btn.disabled-novelty:hover { border-color: var(--border); background: var(--surface1); }
+  .online-btn { border-color: var(--border); }
+  .online-btn.selected { border-color: #2563eb; background: color-mix(in srgb, #2563eb 15%, transparent); color: #2563eb; }
+  .online-btn.disabled-online { opacity: 0.35; cursor: not-allowed; }
+  .online-btn.disabled-online:hover { border-color: var(--border); background: var(--surface1); }
   .meta-btn {
     padding: 0.375rem 0.75rem; border: 2px solid var(--border); border-radius: 6px;
     background: var(--surface1); color: var(--text-h); cursor: pointer;

@@ -2,7 +2,7 @@ import { Chess } from 'chess.js';
 import { db } from './schema';
 import type { Position, Repertoire, ComfortLevel, Link, PgnAttachment, MoveLabel, MoveMarker, PreparationRecord } from '../types';
 import { cacheKey, toChessJsFen, getTurn, normalizeFen } from '../utils/fen';
-import { invalidateNoveltyCache } from '../state/novelty.svelte';
+import { invalidateNoveltyCache, invalidateOnlineNoveltyCache } from '../state/novelty.svelte';
 import { STARTING_FEN, STARTING_POSITION_COMMENT } from '../constants';
 import { findMoveNumber } from '../utils/positionQueries';
 import { formatNumberedSan } from '../utils/positionUtils';
@@ -238,6 +238,7 @@ export async function setMoveMarker(repertoire: Repertoire, fen: string, san: st
   pos.updatedAt = Date.now();
   await db.positions.put(toPlain(pos));
   invalidateNoveltyCache(repertoire);
+  invalidateOnlineNoveltyCache(repertoire);
 }
 
 export async function addLink(repertoire: Repertoire, fen: string, link: Link): Promise<void> {

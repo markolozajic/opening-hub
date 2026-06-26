@@ -2,7 +2,7 @@
   import type { Position, ComfortLevel, Link, PgnAttachment, Repertoire } from '../types';
   import { nav } from '../state/navigation.svelte';
   import { setPositionName, setPositionComment, setComfortLevel, setForcedDraw, setPracticalDraw, addLink, removeLink, addPgnAttachment, removePgnAttachment, getPosition, updateLink } from '../db/positionStore.svelte';
-  import { getNovelty } from '../state/novelty.svelte';
+  import { getNovelty, getOnlineNovelty } from '../state/novelty.svelte';
   import { invalidateComfortCache } from '../state/comfort.svelte';
   import { invalidateDrawCounts } from '../state/drawCounts.svelte';
   import { getOpponentNames, tagPosition, untagPosition, getDirectlyTaggedOpponents } from '../state/preparation.svelte';
@@ -42,6 +42,7 @@
   );
 
   let isNovel = $derived(position ? getNovelty(nav.activeRepertoire, position.fen) : false);
+  let isOnlineNovel = $derived(position ? getOnlineNovelty(nav.activeRepertoire, position.fen) : false);
 
   let textareaRef = $state<HTMLTextAreaElement | null>(null);
   let lastProcessedKey = '';
@@ -183,6 +184,9 @@
         <h3 class="editor-title">Edit Position</h3>
         {#if isNovel}
           <span class="novelty-badge">N</span>
+        {/if}
+        {#if isOnlineNovel}
+          <span class="online-novelty-badge">ON</span>
         {/if}
       </div>
       <div class="editor-actions">
@@ -344,6 +348,12 @@
     display: inline-flex; align-items: center; justify-content: center;
     font-size: 0.625rem; font-weight: 700; line-height: 1;
     color: #14b8a6; border: 1px solid #14b8a6; border-radius: 3px;
+    padding: 1px 4px; letter-spacing: 0.02em;
+  }
+  .online-novelty-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.625rem; font-weight: 700; line-height: 1;
+    color: #2563eb; border: 1px solid #2563eb; border-radius: 3px;
     padding: 1px 4px; letter-spacing: 0.02em;
   }
   .field { display: flex; flex-direction: column; gap: 0.375rem; }
