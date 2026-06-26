@@ -20,6 +20,7 @@
   let type = $state<'youtube' | 'other' | 'lichess'>('other');
   let fetchingTitle = $state(false);
   let fetchedPgn = $state<string | null>(null);
+  let lichessFetchTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
 
   let editingId = $state<string | null>(null);
   let editUrl = $state('');
@@ -61,6 +62,23 @@
     }
   }
 
+  async function fetchLichessFromUrl(currentUrl: string, setLabel: (v: string) => void, setIsFetching: (v: boolean) => void) {
+    const gameId = parseLichessUrl(currentUrl);
+    if (!gameId) {
+      fetchedPgn = null;
+      return;
+    }
+    setIsFetching(true);
+    try {
+      const pgn = await fetchLichessPgn(gameId);
+      fetchedPgn = pgn;
+      setLabel(extractPgnLabel(pgn));
+    } catch {
+      fetchedPgn = null;
+    }
+    setIsFetching(false);
+  }
+
   async function handleTypeChange(newType: string, currentUrl: string, currentLabel: string, setIsFetching: (v: boolean) => void, setLabel: (v: string) => void) {
     if (newType === 'youtube' && YOUTUBE_RE.test(currentUrl) && !currentLabel.trim()) {
       setIsFetching(true);
@@ -68,20 +86,16 @@
       if (title) setLabel(title);
       setIsFetching(false);
     }
-    if (newType === 'lichess') {
-      const gameId = parseLichessUrl(currentUrl);
-      if (gameId && !currentLabel.trim()) {
-        setIsFetching(true);
-        try {
-          const pgn = await fetchLichessPgn(gameId);
-          fetchedPgn = pgn;
-          setLabel(extractPgnLabel(pgn));
-        } catch {
-          fetchedPgn = null;
-        }
-        setIsFetching(false);
-      }
+    if (newType === 'lichess' && !currentLabel.trim()) {
+      await fetchLichessFromUrl(currentUrl, setLabel, setIsFetching);
     }
+  }
+
+  function handleUrlChange(currentUrl: string, setLabel: (v: string) => void, setIsFetching: (v: boolean) => void) {
+    if (lichessFetchTimeout) clearTimeout(lichessFetchTimeout);
+    lichessFetchTimeout = setTimeout(async () => {
+      await fetchLichessFromUrl(currentUrl, setLabel, setIsFetching);
+    }, 500);
   }
 
   function handleAdd() {
@@ -125,7 +139,7 @@
       {#each links as link}
         {#if editingId === link.id}
           <div class="edit-form">
-            <input bind:value={editUrl} placeholder="URL" class="input" type="url" />
+            <input bind:value={editUrl} placeholder="URL" class="input" type="url" oninput={() => editType === 'lichess' && handleUrlChange(editUrl, v => editLabel = v, v => editFetchingTitle = v)} />
             <input bind:value={editLabel} placeholder="Label (optional)" class="input" />
             <select bind:value={editType} class="input" onchange={() => handleTypeChange(editType, editUrl, editLabel, v => editFetchingTitle = v, v => editLabel = v)}>
               <option value="youtube">YouTube</option>
@@ -187,7 +201,7 @@
   {#if !readonly}
     {#if showForm}
       <div class="add-form">
-        <input bind:value={url} placeholder="URL" class="input" type="url" />
+        <input bind:value={url} placeholder="URL" class="input" type="url" oninput={() => type === 'lichess' && handleUrlChange(url, v => label = v, v => fetchingTitle = v)} />
         <input bind:value={label} placeholder="Label (optional)" class="input" />
         <select bind:value={type} class="input" onchange={() => handleTypeChange(type, url, label, v => fetchingTitle = v, v => label = v)}>
           <option value="youtube">YouTube</option>
